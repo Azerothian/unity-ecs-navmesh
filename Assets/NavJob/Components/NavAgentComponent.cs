@@ -62,5 +62,5 @@ namespace NavJob.Components
         }
     }
 
-    public class NavAgentComponent : ComponentDataWrapper<NavAgent> { }
+    public class NavAgentComponent : ComponentDataProxy<NavAgent> { }
 }

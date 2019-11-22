@@ -19,7 +19,7 @@ namespace NavJob.Systems
         FailedToResolve,
     }
 
-    [DisableAutoCreation]
+    //[DisableAutoCreation]
     public class NavMeshQuerySystem : JobComponentSystem
     {
 
@@ -94,7 +94,7 @@ namespace NavJob.Systems
             {
                 if (_instance == null)
                 {
-                    _instance = World.Active.GetOrCreateManager<NavMeshQuerySystem> ();
+                    _instance = World.Active.GetOrCreateSystem<NavMeshQuerySystem> ();
                 }
                 return _instance;
             }
@@ -390,7 +390,7 @@ namespace NavJob.Systems
             return inputDeps;
         }
 
-        protected override void OnCreateManager (int capacity)
+        protected override void OnCreate()
         {
             world = NavMeshWorld.GetDefaultWorld ();
             locationQuery = new NavMeshQuery (world, Allocator.Persistent);
@@ -413,7 +413,7 @@ namespace NavJob.Systems
             QueryQueue = new ConcurrentQueue<PathQueryData> ();
         }
 
-        protected override void OnDestroyManager ()
+        protected override void OnDestroy()
         {
             ProgressQueue.Dispose ();
             locationQuery.Dispose ();

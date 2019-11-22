@@ -9,18 +9,18 @@ using NavJob.Components;
 namespace NavJob.Systems
 {
     /// <summary>
-    /// Syncs the transform matrix from the nav agent to a TransformMatrix component
+    /// Syncs the transform matrix from the nav agent to a LocalToWorld component
     /// </summary>
     [UpdateAfter (typeof (NavAgentSystem))]
-    [DisableAutoCreation]
+    //[DisableAutoCreation]
     public class NavAgentToTransfomMatrixSyncSystem : JobComponentSystem
     {
 
         [BurstCompile]
-        [RequireSubtractiveComponent (typeof (Position), typeof (Rotation))]
-        private struct NavAgentToTransfomMatrixSyncSystemJob : IJobProcessComponentData<NavAgent, TransformMatrix>
+        [ExcludeComponent(typeof (Translation), typeof (Rotation))]
+        private struct NavAgentToTransfomMatrixSyncSystemJob : IJobForEach<NavAgent, LocalToWorld>
         {
-            public void Execute ([ReadOnly] ref NavAgent NavAgent, ref TransformMatrix Matrix)
+            public void Execute ([ReadOnly] ref NavAgent NavAgent, ref LocalToWorld Matrix)
             {
                 Matrix.Value = Matrix4x4.TRS (NavAgent.position, NavAgent.rotation, Vector3.one);
             }
@@ -28,7 +28,7 @@ namespace NavJob.Systems
 
         protected override JobHandle OnUpdate (JobHandle inputDeps)
         {
-            return new NavAgentToTransfomMatrixSyncSystemJob ().Schedule (this, 64, inputDeps);
+            return new NavAgentToTransfomMatrixSyncSystemJob ().Schedule (this, inputDeps);
         }
     }
 
@@ -36,14 +36,14 @@ namespace NavJob.Systems
     /// Sets the NavAgent position to the Position component
     /// </summary>
     [UpdateBefore (typeof (NavAgentSystem))]
-    [DisableAutoCreation]
+    //[DisableAutoCreation]
     public class NavAgentFromPositionSyncSystem : JobComponentSystem
     {
         [BurstCompile]
         [RequireComponentTag (typeof (SyncPositionToNavAgent))]
-        private struct NavAgentFromPositionSyncSystemJob : IJobProcessComponentData<NavAgent, Position>
+        private struct NavAgentFromPositionSyncSystemJob : IJobForEach<NavAgent, Translation>
         {
-            public void Execute (ref NavAgent NavAgent, [ReadOnly] ref Position Position)
+            public void Execute (ref NavAgent NavAgent, [ReadOnly] ref Translation Position)
             {
                 NavAgent.position = Position.Value;
             }
@@ -51,7 +51,7 @@ namespace NavJob.Systems
 
         protected override JobHandle OnUpdate (JobHandle inputDeps)
         {
-            return new NavAgentFromPositionSyncSystemJob ().Schedule (this, 64, inputDeps);
+            return new NavAgentFromPositionSyncSystemJob ().Schedule (this, inputDeps);
         }
     }
 
@@ -59,14 +59,14 @@ namespace NavJob.Systems
     /// Sets the Position component to the NavAgent position
     /// </summary>
     [UpdateAfter (typeof (NavAgentSystem))]
-    [DisableAutoCreation]
+    //[DisableAutoCreation]
     public class NavAgentToPositionSyncSystem : JobComponentSystem
     {
         [BurstCompile]
         [RequireComponentTag (typeof (SyncPositionFromNavAgent))]
-        private struct NavAgentToPositionSyncSystemJob : IJobProcessComponentData<NavAgent, Position>
+        private struct NavAgentToPositionSyncSystemJob : IJobForEach<NavAgent, Translation>
         {
-            public void Execute ([ReadOnly] ref NavAgent NavAgent, ref Position Position)
+            public void Execute ([ReadOnly] ref NavAgent NavAgent, ref Translation Position)
             {
                 Position.Value = NavAgent.position;
             }
@@ -74,7 +74,7 @@ namespace NavJob.Systems
 
         protected override JobHandle OnUpdate (JobHandle inputDeps)
         {
-            return new NavAgentToPositionSyncSystemJob ().Schedule (this, 64, inputDeps);
+            return new NavAgentToPositionSyncSystemJob ().Schedule(this, inputDeps);
         }
     }
 
@@ -82,12 +82,12 @@ namespace NavJob.Systems
     /// Sets the NavAgent rotation to the Rotation component
     /// </summary>
     [UpdateBefore (typeof (NavAgentSystem))]
-    [DisableAutoCreation]
+    //[DisableAutoCreation]
     public class NavAgentFromRotationSyncSystem : JobComponentSystem
     {
         [BurstCompile]
         [RequireComponentTag (typeof (SyncRotationToNavAgent))]
-        private struct NavAgentFromRotationSyncSystemJob : IJobProcessComponentData<NavAgent, Rotation>
+        private struct NavAgentFromRotationSyncSystemJob : IJobForEach<NavAgent, Rotation>
         {
             public void Execute (ref NavAgent NavAgent, [ReadOnly] ref Rotation Rotation)
             {
@@ -97,7 +97,7 @@ namespace NavJob.Systems
 
         protected override JobHandle OnUpdate (JobHandle inputDeps)
         {
-            return new NavAgentFromRotationSyncSystemJob ().Schedule (this, 64, inputDeps);
+            return new NavAgentFromRotationSyncSystemJob ().Schedule (this, inputDeps);
         }
     }
 
@@ -105,12 +105,12 @@ namespace NavJob.Systems
     /// Sets the Rotation component to the NavAgent rotation
     /// </summary>
     [UpdateAfter (typeof (NavAgentSystem))]
-    [DisableAutoCreation]
+    //[DisableAutoCreation]
     public class NavAgentToRotationSyncSystem : JobComponentSystem
     {
         [BurstCompile]
         [RequireComponentTag (typeof (SyncRotationFromNavAgent))]
-        private struct NavAgentToRotationSyncSystemJob : IJobProcessComponentData<NavAgent, Rotation>
+        private struct NavAgentToRotationSyncSystemJob : IJobForEach<NavAgent, Rotation>
         {
             public void Execute ([ReadOnly] ref NavAgent NavAgent, ref Rotation Rotation)
             {
@@ -120,7 +120,7 @@ namespace NavJob.Systems
 
         protected override JobHandle OnUpdate (JobHandle inputDeps)
         {
-            return new NavAgentToRotationSyncSystemJob ().Schedule (this, 64, inputDeps);
+            return new NavAgentToRotationSyncSystemJob ().Schedule (this, inputDeps);
         }
     }
 }

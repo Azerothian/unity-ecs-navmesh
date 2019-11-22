@@ -19,5 +19,5 @@ namespace NavJob.Components
         }
     }
 
-    public class NavAgentAvoidanceComponent : ComponentDataWrapper<NavAgentAvoidance> { }
+    public class NavAgentAvoidanceComponent : ComponentDataProxy<NavAgentAvoidance> { }
 }

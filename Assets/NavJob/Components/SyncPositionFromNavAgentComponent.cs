@@ -5,5 +5,5 @@ namespace NavJob.Components
 {
     public struct SyncPositionFromNavAgent : IComponentData { }
 
-    public class SyncPositionFromNavAgentComponent : ComponentDataWrapper<SyncPositionFromNavAgent> { };
+    public class SyncPositionFromNavAgentComponent : ComponentDataProxy<SyncPositionFromNavAgent> { };
 }

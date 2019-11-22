@@ -11,6 +11,7 @@ using Unity.Transforms;
 using Demo.Behaviours;
 using NavJob.Components;
 using NavJob.Systems;
+using Unity.Collections.LowLevel.Unsafe;
 
 #endregion
 
@@ -45,7 +46,7 @@ namespace Demo
             }
         }
 
-        private PopulationSpawner Getspawner ()
+        private PopulationSpawner GetSpawner ()
         {
             if (_spawner == null)
             {
@@ -55,23 +56,23 @@ namespace Demo
             return _spawner;
         }
 
-        private EntityManager Getmanager ()
+        private EntityQuery spawnQuery;
+        protected override void OnCreate()
         {
-            if (_manager == null)
-            {
-                _manager = World.Active.GetOrCreateManager<EntityManager> ();
-            }
+            base.OnCreate();
 
-            return _manager;
-        }
-
-        protected override void OnCreateManager (int capacity)
-        {
-            base.OnCreateManager (capacity);
             // create the system
-            World.Active.CreateManager<NavAgentSystem> ();
-            World.Active.GetOrCreateManager<NavAgentToTransfomMatrixSyncSystem> ();
-            agent = Getmanager ().CreateArchetype (
+            World.Active.CreateSystem<NavAgentSystem> ();
+            World.Active.GetOrCreateSystem<NavAgentToTransfomMatrixSyncSystem> ();
+            buildings = World.Active.GetOrCreateSystem<BuildingCacheSystem>();
+
+            var spawnQueryDesc = new EntityQueryDesc
+            {
+                All = new ComponentType[] { typeof(PendingSpawn) }
+            };
+            spawnQuery = GetEntityQuery(spawnQueryDesc);
+
+            agent = EntityManager.CreateArchetype (
                 typeof (NavAgent),
                 // optional avoidance
                 // typeof(NavAgentAvoidance),
@@ -82,13 +83,17 @@ namespace Demo
                 // typeof (SyncRotationToNavAgent),
                 // typeof (SyncPositionFromNavAgent),
                 // typeof (SyncRotationFromNavAgent),
-                typeof (TransformMatrix)
+                typeof (LocalToWorld)
             );
+
+
         }
 
-        [Inject] private BuildingCacheSystem buildings;
-        [Inject] private InjectData data;
-        protected override void OnUpdate ()
+        private BuildingCacheSystem buildings;
+
+        //[Inject] private InjectData data;
+
+        protected override void OnUpdate()
         {
             if (Time.time > _nextUpdate && _lastSpawned != spawned)
             {
@@ -97,7 +102,7 @@ namespace Demo
                 SpawnedText.text = $"Spawned: {spawned} people";
             }
 
-            if (Getspawner ().Renderers.Length == 0)
+            if (GetSpawner().Renderers.Length == 0)
             {
                 return;
             }
@@ -107,11 +112,15 @@ namespace Demo
                 return;
             }
 
-            var spawnData = data.Spawn[0];
+            var pendings = GetComponentDataFromEntity<PendingSpawn>();
+            var entities = spawnQuery.ToEntityArray(Allocator.TempJob);
+            var rootEntity = entities[0];
+
+            var spawnData = pendings[rootEntity];
             pendingSpawn = spawnData.Quantity;
             spawnData.Quantity = 0;
-            data.Spawn[0] = spawnData;
-            var manager = Getmanager ();
+            pendings[rootEntity] = spawnData;
+            var manager = EntityManager;
             for (var i = 0; i < pendingSpawn; i++)
             {
                 spawned++;
@@ -132,16 +141,17 @@ namespace Demo
                 // optional for avoidance
                 // var navAvoidance = new NavAgentAvoidance(2f);
                 // manager.SetComponentData(entity, navAvoidance);
-                manager.AddSharedComponentData (entity, Getspawner ().Renderers[Random.Range (0, Getspawner ().Renderers.Length)].Value);
+                manager.AddSharedComponentData (entity, GetSpawner ().Renderers[UnityEngine.Random.Range (0, GetSpawner ().Renderers.Length)].Value);
             }
-            return;
+
+            entities.Dispose();
         }
 
-        private struct InjectData
+        /*private struct InjectData
         {
             public readonly int Length;
             public ComponentDataArray<PendingSpawn> Spawn;
-        }
+        }*/
     }
 
     public class DetectIdleAgentSystem : ComponentSystem
@@ -190,24 +200,28 @@ namespace Demo
         [BurstCompile]
         private struct DetectIdleAgentJob : IJobParallelFor
         {
-            public InjectData data;
-            public NativeQueue<AgentData>.Concurrent needsPath;
+            [ReadOnly]
+            [DeallocateOnJobCompletion]
+            public NativeArray<Entity> entities;
+            [NativeDisableParallelForRestriction]
+            public ComponentDataFromEntity<NavAgent> agents;
+            public NativeQueue<AgentData>.ParallelWriter needsPath;
 
             public void Execute (int index)
             {
-                var agent = data.Agents[index];
-                if (data.Agents[index].status == AgentStatus.Idle)
+                var entity = entities[index];
+                var agent = agents[entity];
+                if (agent.status == AgentStatus.Idle)
                 {
-                    needsPath.Enqueue (new AgentData { index = index, agent = agent, entity = data.Entities[index] });
+                    needsPath.Enqueue (new AgentData { index = index, agent = agent, entity = entity });
                     agent.status = AgentStatus.PathQueued;
-                    data.Agents[index] = agent;
+                    agents[entity] = agent;
                 }
             }
         }
 
         private struct SetNextPathJob : IJob
         {
-            public InjectData data;
             public NativeQueue<AgentData> needsPath;
             public void Execute ()
             {
@@ -219,15 +233,8 @@ namespace Demo
             }
         }
 
-        private struct InjectData
-        {
-            public readonly int Length;
-            [ReadOnly] public EntityArray Entities;
-            public ComponentDataArray<NavAgent> Agents;
-        }
-
-        [Inject] InjectData data;
-        [Inject] NavMeshQuerySystem navQuery;
+        private EntityQuery agentQuery;
+        NavMeshQuerySystem navQuery;
 
         protected override void OnUpdate ()
         {
@@ -237,12 +244,35 @@ namespace Demo
                 CachedPathText.text = $"Cached Paths: {navQuery.CachedCount}";
                 _nextUpdate = Time.time + 0.5f;
             }
-            var inputDeps = new DetectIdleAgentJob { data = data, needsPath = needsPath }.Schedule (data.Length, 64);
-            inputDeps = new SetNextPathJob { data = data, needsPath = needsPath }.Schedule (inputDeps);
+
+            var entityCnt = agentQuery.CalculateEntityCount();
+            var entities = agentQuery.ToEntityArray(Allocator.TempJob);
+
+            var inputDeps = new DetectIdleAgentJob
+            {
+                entities = entities,
+                agents = GetComponentDataFromEntity<NavAgent>(),
+                needsPath = needsPath.AsParallelWriter()
+            }.Schedule (entityCnt, 64);
+            inputDeps = new SetNextPathJob
+            {
+                needsPath = needsPath
+            }.Schedule (inputDeps);
             inputDeps.Complete ();
         }
 
-        protected override void OnDestroyManager ()
+        protected override void OnCreate()
+        {
+            base.OnCreate();
+            var agentQueryDesc = new EntityQueryDesc
+            {
+                All = new ComponentType[] { typeof(NavAgent) }
+            };
+            agentQuery = GetEntityQuery(agentQueryDesc);
+            navQuery = World.Active.GetOrCreateSystem<NavMeshQuerySystem>();
+        }
+
+        protected override void OnDestroy()
         {
             needsPath.Dispose ();
         }
@@ -255,19 +285,12 @@ namespace Demo
         private PopulationSpawner spawner;
         private int nextCommercial = 0;
         private int nextResidential = 0;
+        //private EntityQuery buildingQuery;
         private static BuildingCacheSystem instance;
 
-        protected override void OnCreateManager (int capacity)
+        protected override void OnCreate()
         {
             instance = this;
-        }
-
-        [Inject] private InjectData data;
-
-        private struct InjectData
-        {
-            public readonly int Length;
-            [ReadOnly] public ComponentDataArray<BuildingData> Buildings;
         }
 
         private PopulationSpawner Spawner
@@ -318,9 +341,26 @@ namespace Demo
 
         protected override void OnUpdate ()
         {
-            for (var i = 0; i < data.Length; i++)
+
+            Entities.WithAll<BuildingData>().ForEach((ref BuildingData building) =>
             {
-                var building = data.Buildings[i];
+                if (building.Type == BuildingType.Residential)
+                {
+                    ResidentialBuildings.Add(building.Position);
+                }
+                else
+                {
+                    CommercialBuildings.Add(building.Position);
+                }
+
+                PostUpdateCommands.RemoveComponent<BuildingData>(building.Entity);
+            });
+
+            /*var buildings = buildingQuery.ToComponentDataArray<BuildingData>(Allocator.Temp);
+            
+            for (var i = 0; i < buildings.Length; i++)
+            {
+                var building = buildings[i];
                 if (building.Type == BuildingType.Residential)
                 {
                     ResidentialBuildings.Add (building.Position);
@@ -332,9 +372,11 @@ namespace Demo
 
                 PostUpdateCommands.RemoveComponent<BuildingData> (building.Entity);
             }
+
+            buildings.Dispose();*/
         }
 
-        protected override void OnDestroyManager ()
+        protected override void OnDestroy()
         {
             ResidentialBuildings.Dispose ();
             CommercialBuildings.Dispose ();

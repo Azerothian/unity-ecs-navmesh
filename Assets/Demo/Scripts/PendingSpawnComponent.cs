@@ -14,6 +14,6 @@ namespace Demo
         public int AgentAreaMask;
     }
 
-    public class PendingSpawnComponent : ComponentDataWrapper<PendingSpawn> { }
+    public class PendingSpawnComponent : ComponentDataProxy<PendingSpawn> { }
 
 }
