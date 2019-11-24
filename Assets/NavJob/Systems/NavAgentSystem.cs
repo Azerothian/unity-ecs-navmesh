@@ -223,10 +223,10 @@ namespace NavJob.Systems
         {
             instance = this;
 
-            querySystem = World.Active.GetOrCreateSystem<NavMeshQuerySystem>();
-            setDestinationBarrier = World.Active.GetOrCreateSystem<SetDestinationBarrier>();
-            pathSuccessBarrier = World.Active.GetOrCreateSystem<PathSuccessBarrier>();
-            pathErrorBarrier = World.Active.GetOrCreateSystem<PathErrorBarrier>();
+            querySystem = World.GetOrCreateSystem<NavMeshQuerySystem>();
+            setDestinationBarrier = World.GetOrCreateSystem<SetDestinationBarrier>();
+            pathSuccessBarrier = World.GetOrCreateSystem<PathSuccessBarrier>();
+            pathErrorBarrier = World.GetOrCreateSystem<PathErrorBarrier>();
 
             querySystem.RegisterPathResolvedCallback (OnPathSuccess);
             querySystem.RegisterPathFailedCallback (OnPathError);

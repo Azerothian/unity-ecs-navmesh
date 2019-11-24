@@ -62,9 +62,9 @@ namespace Demo
             base.OnCreate();
 
             // create the system
-            World.Active.CreateSystem<NavAgentSystem> ();
-            World.Active.GetOrCreateSystem<NavAgentToTransfomMatrixSyncSystem> ();
-            buildings = World.Active.GetOrCreateSystem<BuildingCacheSystem>();
+            World.CreateSystem<NavAgentSystem> ();
+            World.GetOrCreateSystem<NavAgentToTransfomMatrixSyncSystem> ();
+            buildings = World.GetOrCreateSystem<BuildingCacheSystem>();
 
             var spawnQueryDesc = new EntityQueryDesc
             {
@@ -269,7 +269,7 @@ namespace Demo
                 All = new ComponentType[] { typeof(NavAgent) }
             };
             agentQuery = GetEntityQuery(agentQueryDesc);
-            navQuery = World.Active.GetOrCreateSystem<NavMeshQuerySystem>();
+            navQuery = World.GetOrCreateSystem<NavMeshQuerySystem>();
         }
 
         protected override void OnDestroy()

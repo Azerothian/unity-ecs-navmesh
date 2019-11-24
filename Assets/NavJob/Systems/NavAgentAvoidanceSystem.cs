@@ -165,7 +165,7 @@ namespace NavJob.Systems
             navMeshQuery = new NavMeshQuery (NavMeshWorld.GetDefaultWorld (), Allocator.Persistent, 128);
             indexMap = new NativeMultiHashMap<int, int> (100 * 1024, Allocator.Persistent);
             nextPositionMap = new NativeMultiHashMap<int, float3> (100 * 1024, Allocator.Persistent);
-            querySystem = World.Active.GetOrCreateSystem<NavMeshQuerySystem>();
+            querySystem = World.GetOrCreateSystem<NavMeshQuerySystem>();
         }
 
         protected override void OnDestroy()
