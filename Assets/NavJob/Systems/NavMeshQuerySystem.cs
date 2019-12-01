@@ -60,7 +60,7 @@ namespace NavJob.Systems
         {
             get
             {
-                return QueryQueue.Count;
+                return _queryQueue.Count;
             }
         }
 
@@ -71,24 +71,24 @@ namespace NavJob.Systems
         {
             get
             {
-                return cachedPaths.Count;
+                return _cachedPaths.Count;
             }
         }
 
-        private NavMeshWorld world;
-        private NavMeshQuery locationQuery;
-        private ConcurrentQueue<PathQueryData> QueryQueue;
-        private NativeList<PathQueryData> ProgressQueue;
-        private ConcurrentQueue<int> availableSlots;
-        private List<int> takenSlots;
-        private List<JobHandle> handles;
-        private List<NativeArray<int>> statuses;
-        private List<NativeArray<NavMeshLocation>> results;
-        private PathQueryData[] queryDatas;
-        private NavMeshQuery[] queries;
-        private Dictionary<int, UpdateQueryStatusJob> jobs;
+        private NavMeshWorld _world;
+        private NavMeshQuery _locationQuery;
+        private ConcurrentQueue<PathQueryData> _queryQueue;
+        private NativeList<PathQueryData> _progressQueue;
+        private ConcurrentQueue<int> _availableSlots;
+        private List<int> _takenSlots;
+        private List<JobHandle> _handles;
+        private List<NativeArray<int>> _statuses;
+        private List<NativeArray<NavMeshLocation>> _results;
+        private PathQueryData[] _queryDatas;
+        private NavMeshQuery[] _queries;
+        private Dictionary<int, UpdateQueryStatusJob> _jobs;
         private static NavMeshQuerySystem _instance;
-        private static NavMeshQuerySystem instance
+        private static NavMeshQuerySystem Instance
         {
             get
             {
@@ -101,9 +101,9 @@ namespace NavJob.Systems
         }
         public delegate void SuccessQueryDelegate (int id, Vector3[] corners);
         public delegate void FailedQueryDelegate (int id, PathfindingFailedReason reason);
-        private SuccessQueryDelegate pathResolvedCallbacks;
-        private FailedQueryDelegate pathFailedCallbacks;
-        private ConcurrentDictionary<int, Vector3[]> cachedPaths = new ConcurrentDictionary<int, Vector3[]> ();
+        private SuccessQueryDelegate _pathResolvedCallbacks;
+        private FailedQueryDelegate _pathFailedCallbacks;
+        private readonly ConcurrentDictionary<int, Vector3[]> _cachedPaths = new ConcurrentDictionary<int, Vector3[]> ();
 
         private struct PathQueryData
         {
@@ -120,7 +120,7 @@ namespace NavJob.Systems
         /// <param name="callback"></param>
         public void RegisterPathResolvedCallback (SuccessQueryDelegate callback)
         {
-            pathResolvedCallbacks += callback;
+            _pathResolvedCallbacks += callback;
         }
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace NavJob.Systems
         /// <param name="callback"></param>
         public void RegisterPathFailedCallback (FailedQueryDelegate callback)
         {
-            pathFailedCallbacks += callback;
+            _pathFailedCallbacks += callback;
         }
 
         /// <summary>
@@ -138,19 +138,20 @@ namespace NavJob.Systems
         /// <param name="id"></param>
         /// <param name="from"></param>
         /// <param name="to"></param>
+        /// <param name="areaMask"></param>
         public void RequestPath (int id, Vector3 from, Vector3 to, int areaMask = -1)
         {
             var key = GetKey ((int) from.x, (int) from.z, (int) to.x, (int) to.z);
             if (UseCache)
             {
-                if (cachedPaths.TryGetValue (key, out Vector3[] waypoints))
+                if (_cachedPaths.TryGetValue (key, out Vector3[] waypoints))
                 {
-                    pathResolvedCallbacks?.Invoke (id, waypoints);
+                    _pathResolvedCallbacks?.Invoke (id, waypoints);
                     return;
                 }
             }
             var data = new PathQueryData { id = id, from = from, to = to, areaMask = areaMask, key = key };
-            QueryQueue.Enqueue (data);
+            _queryQueue.Enqueue (data);
         }
 
         /// <summary>
@@ -159,7 +160,7 @@ namespace NavJob.Systems
         public void PurgeCache ()
         {
             Version++;
-            cachedPaths.Clear ();
+            _cachedPaths.Clear ();
         }
 
         /// <summary>
@@ -168,7 +169,7 @@ namespace NavJob.Systems
         /// <param name="callback"></param>
         public static void RegisterPathResolvedCallbackStatic (SuccessQueryDelegate callback)
         {
-            instance.pathResolvedCallbacks += callback;
+            Instance._pathResolvedCallbacks += callback;
         }
 
         /// <summary>
@@ -177,7 +178,7 @@ namespace NavJob.Systems
         /// <param name="callback"></param>
         public static void RegisterPathFailedCallbackStatic (FailedQueryDelegate callback)
         {
-            instance.pathFailedCallbacks += callback;
+            Instance._pathFailedCallbacks += callback;
         }
 
         /// <summary>
@@ -186,9 +187,10 @@ namespace NavJob.Systems
         /// <param name="id"></param>
         /// <param name="from"></param>
         /// <param name="to"></param>
+        /// <param name="areaMask"></param>
         public static void RequestPathStatic (int id, Vector3 from, Vector3 to, int areaMask = -1)
         {
-            instance.RequestPath (id, from, to, areaMask);
+            Instance.RequestPath (id, from, to, areaMask);
         }
 
         /// <summary>
@@ -196,64 +198,64 @@ namespace NavJob.Systems
         /// </summary>
         public static void PurgeCacheStatic ()
         {
-            instance.PurgeCache ();
+            Instance.PurgeCache ();
         }
 
         private struct UpdateQueryStatusJob : IJob
         {
-            public NavMeshQuery query;
-            public PathQueryData data;
-            public int maxIterations;
-            public int maxPathSize;
-            public int index;
-            public NativeArray<int> statuses;
-            public NativeArray<NavMeshLocation> results;
+            public NavMeshQuery Query;
+            public PathQueryData Data;
+            public int MaxIterations;
+            public int MaxPathSize;
+            public int Index;
+            public NativeArray<int> Statuses;
+            public NativeArray<NavMeshLocation> Results;
 
             public void Execute ()
             {
-                var status = query.UpdateFindPath (maxIterations, out int performed);
+                var status = Query.UpdateFindPath (MaxIterations, out int performed);
 
                 if (status == PathQueryStatus.InProgress | status == (PathQueryStatus.InProgress | PathQueryStatus.OutOfNodes))
                 {
-                    statuses[0] = 0;
+                    Statuses[0] = 0;
                     return;
                 }
 
-                statuses[0] = 1;
+                Statuses[0] = 1;
 
                 if (status == PathQueryStatus.Success)
                 {
-                    var endStatus = query.EndFindPath (out int polySize);
+                    var endStatus = Query.EndFindPath (out int polySize);
                     if (endStatus == PathQueryStatus.Success)
                     {
                         var polygons = new NativeArray<PolygonId> (polySize, Allocator.Temp);
-                        query.GetPathResult (polygons);
-                        var straightPathFlags = new NativeArray<StraightPathFlags> (maxPathSize, Allocator.Temp);
-                        var vertexSide = new NativeArray<float> (maxPathSize, Allocator.Temp);
+                        Query.GetPathResult (polygons);
+                        var straightPathFlags = new NativeArray<StraightPathFlags> (MaxPathSize, Allocator.Temp);
+                        var vertexSide = new NativeArray<float> (MaxPathSize, Allocator.Temp);
                         var cornerCount = 0;
                         var pathStatus = PathUtils.FindStraightPath (
-                            query,
-                            data.from,
-                            data.to,
+                            Query,
+                            Data.from,
+                            Data.to,
                             polygons,
                             polySize,
-                            ref results,
+                            ref Results,
                             ref straightPathFlags,
                             ref vertexSide,
                             ref cornerCount,
-                            maxPathSize
+                            MaxPathSize
                         );
 
                         if (pathStatus == PathQueryStatus.Success)
                         {
-                            statuses[1] = 1;
-                            statuses[2] = cornerCount;
+                            Statuses[1] = 1;
+                            Statuses[2] = cornerCount;
                         }
                         else
                         {
                             Debug.LogWarning (pathStatus);
-                            statuses[0] = 1;
-                            statuses[1] = 2;
+                            Statuses[0] = 1;
+                            Statuses[1] = 2;
                         }
                         polygons.Dispose ();
                         straightPathFlags.Dispose ();
@@ -262,14 +264,14 @@ namespace NavJob.Systems
                     else
                     {
                         Debug.LogWarning (endStatus);
-                        statuses[0] = 1;
-                        statuses[1] = 2;
+                        Statuses[0] = 1;
+                        Statuses[1] = 2;
                     }
                 }
                 else
                 {
-                    statuses[0] = 1;
-                    statuses[1] = 3;
+                    Statuses[0] = 1;
+                    Statuses[1] = 3;
                 }
             }
         }
@@ -277,51 +279,51 @@ namespace NavJob.Systems
         protected override JobHandle OnUpdate (JobHandle inputDeps)
         {
 
-            if (QueryQueue.Count == 0 && availableSlots.Count == MaxQueries)
+            if (_queryQueue.Count == 0 && _availableSlots.Count == MaxQueries)
             {
                 return inputDeps;
             }
 
             int j = 0;
-            while (QueryQueue.Count > 0 && availableSlots.Count > 0)
+            while (_queryQueue.Count > 0 && _availableSlots.Count > 0)
             {
-                if (QueryQueue.TryDequeue (out PathQueryData pending))
+                if (_queryQueue.TryDequeue (out PathQueryData pending))
                 {
-                    if (UseCache && cachedPaths.TryGetValue (pending.key, out Vector3[] waypoints))
+                    if (UseCache && _cachedPaths.TryGetValue (pending.key, out Vector3[] waypoints))
                     {
-                        pathResolvedCallbacks?.Invoke (pending.id, waypoints);
+                        _pathResolvedCallbacks?.Invoke (pending.id, waypoints);
                     }
-                    else if (availableSlots.TryDequeue (out int index))
+                    else if (_availableSlots.TryDequeue (out int index))
                     {
-                        var query = new NavMeshQuery (world, Allocator.Persistent, MaxPathSize);
+                        var query = new NavMeshQuery (_world, Allocator.Persistent, MaxPathSize);
                         var from = query.MapLocation (pending.from, Vector3.one * 10, 0);
                         var to = query.MapLocation (pending.to, Vector3.one * 10, 0);
                         if (!query.IsValid (from) || !query.IsValid (to))
                         {
                             query.Dispose ();
-                            pathFailedCallbacks?.Invoke (pending.id, PathfindingFailedReason.InvalidToOrFromLocation);
+                            _pathFailedCallbacks?.Invoke (pending.id, PathfindingFailedReason.InvalidToOrFromLocation);
                             continue;
                         }
                         var status = query.BeginFindPath (from, to, pending.areaMask);
                         if (status == PathQueryStatus.InProgress || status == PathQueryStatus.Success)
                         {
                             j++;
-                            takenSlots.Add (index);
-                            queries[index] = query;
-                            queryDatas[index] = pending;
+                            _takenSlots.Add (index);
+                            _queries[index] = query;
+                            _queryDatas[index] = pending;
                         }
                         else
                         {
-                            QueryQueue.Enqueue (pending);
-                            availableSlots.Enqueue (index);
-                            pathFailedCallbacks?.Invoke (pending.id, PathfindingFailedReason.FailedToBegin);
+                            _queryQueue.Enqueue (pending);
+                            _availableSlots.Enqueue (index);
+                            _pathFailedCallbacks?.Invoke (pending.id, PathfindingFailedReason.FailedToBegin);
                             query.Dispose ();
                         }
                     }
                     else
                     {
                         Debug.Log ("index not available");
-                        QueryQueue.Enqueue (pending);
+                        _queryQueue.Enqueue (pending);
                     }
                 }
                 if (j > MaxQueries)
@@ -331,59 +333,59 @@ namespace NavJob.Systems
                 }
             }
 
-            for (int i = 0; i < takenSlots.Count; i++)
+            for (int i = 0; i < _takenSlots.Count; i++)
             {
-                int index = takenSlots[i];
+                int index = _takenSlots[i];
                 var job = new UpdateQueryStatusJob ()
                 {
-                    maxIterations = MaxIterations,
-                    maxPathSize = MaxPathSize,
-                    data = queryDatas[index],
-                    statuses = statuses[index],
-                    query = queries[index],
-                    index = index,
-                    results = results[index]
+                    MaxIterations = MaxIterations,
+                    MaxPathSize = MaxPathSize,
+                    Data = _queryDatas[index],
+                    Statuses = _statuses[index],
+                    Query = _queries[index],
+                    Index = index,
+                    Results = _results[index]
                 };
-                jobs[index] = job;
-                handles[index] = job.Schedule (inputDeps);
+                _jobs[index] = job;
+                _handles[index] = job.Schedule (inputDeps);
             }
 
-            for (int i = takenSlots.Count - 1; i > -1; i--)
+            for (int i = _takenSlots.Count - 1; i > -1; i--)
             {
-                int index = takenSlots[i];
-                handles[index].Complete ();
-                var job = jobs[index];
-                if (job.statuses[0] == 1)
+                int index = _takenSlots[i];
+                _handles[index].Complete ();
+                var job = _jobs[index];
+                if (job.Statuses[0] == 1)
                 {
-                    if (job.statuses[1] == 1)
+                    if (job.Statuses[1] == 1)
                     {
-                        var waypoints = new Vector3[job.statuses[2]];
-                        for (int k = 0; k < job.statuses[2]; k++)
+                        var waypoints = new Vector3[job.Statuses[2]];
+                        for (int k = 0; k < job.Statuses[2]; k++)
                         {
-                            waypoints[k] = job.results[k].position;
+                            waypoints[k] = job.Results[k].position;
                         }
                         if (UseCache)
                         {
-                            cachedPaths[job.data.key] = waypoints;
+                            _cachedPaths[job.Data.key] = waypoints;
                         }
-                        pathResolvedCallbacks?.Invoke (job.data.id, waypoints);
+                        _pathResolvedCallbacks?.Invoke (job.Data.id, waypoints);
                     }
-                    else if (job.statuses[1] == 2)
+                    else if (job.Statuses[1] == 2)
                     {
-                        pathFailedCallbacks?.Invoke (job.data.id, PathfindingFailedReason.FailedToResolve);
+                        _pathFailedCallbacks?.Invoke (job.Data.id, PathfindingFailedReason.FailedToResolve);
                     }
-                    else if (job.statuses[1] == 3)
+                    else if (job.Statuses[1] == 3)
                     {
-                        if (MaxPathSize < job.maxPathSize * 2)
+                        if (MaxPathSize < job.MaxPathSize * 2)
                         {
-                            MaxPathSize = job.maxPathSize * 2;
+                            MaxPathSize = job.MaxPathSize * 2;
                             // Debug.Log ("Setting path to: " + MaxPathSize);
                         }
-                        QueryQueue.Enqueue (job.data);
+                        _queryQueue.Enqueue (job.Data);
                     }
-                    queries[index].Dispose ();
-                    availableSlots.Enqueue (index);
-                    takenSlots.RemoveAt (i);
+                    _queries[index].Dispose ();
+                    _availableSlots.Enqueue (index);
+                    _takenSlots.RemoveAt (i);
                 }
             }
 
@@ -392,39 +394,39 @@ namespace NavJob.Systems
 
         protected override void OnCreate()
         {
-            world = NavMeshWorld.GetDefaultWorld ();
-            locationQuery = new NavMeshQuery (world, Allocator.Persistent);
-            availableSlots = new ConcurrentQueue<int> ();
-            ProgressQueue = new NativeList<PathQueryData> (MaxQueries, Allocator.Persistent);
-            handles = new List<JobHandle> (MaxQueries);
-            takenSlots = new List<int> (MaxQueries);
-            statuses = new List<NativeArray<int>> (MaxQueries);
-            results = new List<NativeArray<NavMeshLocation>> (MaxQueries);
-            jobs = new Dictionary<int, UpdateQueryStatusJob> (MaxQueries);
-            queries = new NavMeshQuery[MaxQueries];
-            queryDatas = new PathQueryData[MaxQueries];
+            _world = NavMeshWorld.GetDefaultWorld ();
+            _locationQuery = new NavMeshQuery (_world, Allocator.Persistent);
+            _availableSlots = new ConcurrentQueue<int> ();
+            _progressQueue = new NativeList<PathQueryData> (MaxQueries, Allocator.Persistent);
+            _handles = new List<JobHandle> (MaxQueries);
+            _takenSlots = new List<int> (MaxQueries);
+            _statuses = new List<NativeArray<int>> (MaxQueries);
+            _results = new List<NativeArray<NavMeshLocation>> (MaxQueries);
+            _jobs = new Dictionary<int, UpdateQueryStatusJob> (MaxQueries);
+            _queries = new NavMeshQuery[MaxQueries];
+            _queryDatas = new PathQueryData[MaxQueries];
             for (int i = 0; i < MaxQueries; i++)
             {
-                handles.Add (new JobHandle ());
-                statuses.Add (new NativeArray<int> (3, Allocator.Persistent));
-                results.Add (new NativeArray<NavMeshLocation> (MaxPathSize, Allocator.Persistent));
-                availableSlots.Enqueue (i);
+                _handles.Add (new JobHandle ());
+                _statuses.Add (new NativeArray<int> (3, Allocator.Persistent));
+                _results.Add (new NativeArray<NavMeshLocation> (MaxPathSize, Allocator.Persistent));
+                _availableSlots.Enqueue (i);
             }
-            QueryQueue = new ConcurrentQueue<PathQueryData> ();
+            _queryQueue = new ConcurrentQueue<PathQueryData> ();
         }
 
         protected override void OnDestroy()
         {
-            ProgressQueue.Dispose ();
-            locationQuery.Dispose ();
-            for (int i = 0; i < takenSlots.Count; i++)
+            _progressQueue.Dispose ();
+            _locationQuery.Dispose ();
+            for (int i = 0; i < _takenSlots.Count; i++)
             {
-                queries[takenSlots[i]].Dispose ();
+                _queries[_takenSlots[i]].Dispose ();
             }
             for (int i = 0; i < MaxQueries; i++)
             {
-                statuses[i].Dispose ();
-                results[i].Dispose ();
+                _statuses[i].Dispose ();
+                _results[i].Dispose ();
             }
         }
 

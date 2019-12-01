@@ -17,9 +17,9 @@ namespace NavJob.Systems
     public class NavAgentAvoidanceSystem : JobComponentSystem
     {
 
-        public NativeMultiHashMap<int, int> indexMap;
-        public NativeMultiHashMap<int, float3> nextPositionMap;
-        NavMeshQuery navMeshQuery;
+        public NativeMultiHashMap<int, int> IndexMap;
+        public NativeMultiHashMap<int, float3> NextPositionMap;
+        private NavMeshQuery _navMeshQuery;
 
         [BurstCompile]
         struct NavAgentAvoidanceJob : IJobNativeMultiHashMapMergedSharedKeyIndices
@@ -27,39 +27,39 @@ namespace NavJob.Systems
             // This job goes last and should do the deallocation
             [ReadOnly]
             [DeallocateOnJobCompletion]
-            public NativeArray<Entity> entities;
-            public ComponentDataFromEntity<NavAgent> agents;
+            public NativeArray<Entity> Entities;
+            public ComponentDataFromEntity<NavAgent> Agents;
             //public ComponentDataFromEntity<NavAgentAvoidance> avoidances;
 
             [ReadOnly] public NativeMultiHashMap<int, int> indexMap;
             [ReadOnly] public NativeMultiHashMap<int, float3> nextPositionMap;
-            [ReadOnly] public NavMeshQuery navMeshQuery;
-            public float dt;
+            [ReadOnly] public NavMeshQuery NavMeshQuery;
+            public float DeltaTime;
             public void ExecuteFirst (int index) { }
 
             public void ExecuteNext (int firstIndex, int index)
             {
-                var entity = entities[index];
-                var agent = agents[entity];
+                var entity = Entities[index];
+                var agent = Agents[entity];
                 //var avoidance = avoidances[entity];
                 var move = Vector3.left;
                 if (index % 2 == 1)
                 {
                     move = Vector3.right;
                 }
-                float3 drift = agent.rotation * (Vector3.forward + move) * agent.currentMoveSpeed * dt;
+                float3 drift = agent.rotation * (Vector3.forward + move) * agent.currentMoveSpeed * DeltaTime;
                 if (agent.nextWaypointIndex != agent.totalWaypoints)
                 {
                     var offsetWaypoint = agent.currentWaypoint + drift;
-                    var waypointInfo = navMeshQuery.MapLocation (offsetWaypoint, Vector3.one * 3f, 0, agent.areaMask);
-                    if (navMeshQuery.IsValid (waypointInfo))
+                    var waypointInfo = NavMeshQuery.MapLocation (offsetWaypoint, Vector3.one * 3f, 0, agent.areaMask);
+                    if (NavMeshQuery.IsValid (waypointInfo))
                     {
                         agent.currentWaypoint = waypointInfo.position;
                     }
                 }
                 agent.currentMoveSpeed = Mathf.Max (agent.currentMoveSpeed / 2f, 0.5f);
-                var positionInfo = navMeshQuery.MapLocation (agent.position + drift, Vector3.one * 3f, 0, agent.areaMask);
-                if (navMeshQuery.IsValid (positionInfo))
+                var positionInfo = NavMeshQuery.MapLocation (agent.position + drift, Vector3.one * 3f, 0, agent.areaMask);
+                if (NavMeshQuery.IsValid (positionInfo))
                 {
                     agent.nextPosition = positionInfo.position;
                 }
@@ -67,7 +67,7 @@ namespace NavJob.Systems
                 {
                     agent.nextPosition = agent.position;
                 }
-                agents[entity] = agent;
+                Agents[entity] = agent;
             }
         }
 
@@ -75,79 +75,70 @@ namespace NavJob.Systems
         struct HashPositionsJob : IJobParallelFor
         {
             [ReadOnly]
-            public NativeArray<Entity> entities;
+            public NativeArray<Entity> Entities;
             [ReadOnly]
-            public ComponentDataFromEntity<NavAgent> agents;
-            public ComponentDataFromEntity<NavAgentAvoidance> avoidances;
-            public NativeMultiHashMap<int, int>.ParallelWriter indexMap;
-            public NativeMultiHashMap<int, float3>.ParallelWriter nextPositionMap;
-            public int mapSize;
+            public ComponentDataFromEntity<NavAgent> Agents;
+            public ComponentDataFromEntity<NavAgentAvoidance> Avoidances;
+            public NativeMultiHashMap<int, int>.ParallelWriter IndexMap;
+            public NativeMultiHashMap<int, float3>.ParallelWriter NextPositionMap;
+            public int MapSize;
 
             public void Execute (int index)
             {
-                var entity = entities[index];
-                var agent = agents[entity];
-                var avoidance = avoidances[entity];
+                var entity = Entities[index];
+                var agent = Agents[entity];
+                var avoidance = Avoidances[entity];
                 var hash = Hash (agent.position, avoidance.radius);
-                indexMap.Add (hash, index);
-                nextPositionMap.Add (hash, agent.nextPosition);
+                IndexMap.Add (hash, index);
+                NextPositionMap.Add (hash, agent.nextPosition);
                 avoidance.partition = hash;
-                avoidances[entity] = avoidance;
+                Avoidances[entity] = avoidance;
             }
 
             public int Hash (float3 position, float radius)
             {
                 int ix = Mathf.RoundToInt ((position.x / radius) * radius);
                 int iz = Mathf.RoundToInt ((position.z / radius) * radius);
-                return ix * mapSize + iz;
+                return ix * MapSize + iz;
             }
         }
 
-        /*struct InjectData
-        {
-            public readonly int Length;
-            [ReadOnly] public EntityArray Entities;
-            public ComponentDataArray<NavAgent> Agents;
-            public ComponentDataArray<NavAgentAvoidance> Avoidances;
-        }*/
+        private EntityQuery _agentQuery;
 
-        private EntityQuery agentQuery;
-
-        //[Inject] InjectData agent;
-        /*[Inject]*/ NavMeshQuerySystem querySystem;
+        NavMeshQuerySystem _querySystem;
         protected override JobHandle OnUpdate (JobHandle inputDeps)
         {
             // In theory, JobComponentSystem will by default not run OnUpdate if the agentQuery is empty to begin with.
-            var agentCnt = agentQuery.CalculateEntityCount();
+            var agentCnt = _agentQuery.CalculateEntityCount();
 
             if (agentCnt > 0)
             {
-                var agentEntities = agentQuery.ToEntityArray(Allocator.TempJob);
+                var agentEntities = _agentQuery.ToEntityArray(Allocator.TempJob);
 
-                indexMap.Clear ();
-                nextPositionMap.Clear ();
+                IndexMap.Clear ();
+                NextPositionMap.Clear ();
 
                 var hashPositionsJob = new HashPositionsJob
                 {
-                    mapSize = querySystem.MaxMapWidth,
-                    entities = agentEntities,
-                    agents = GetComponentDataFromEntity<NavAgent>(true),
-                    avoidances = GetComponentDataFromEntity<NavAgentAvoidance>(),
-                    indexMap = indexMap.AsParallelWriter(),
-                    nextPositionMap = nextPositionMap.AsParallelWriter()
+                    MapSize = _querySystem.MaxMapWidth,
+                    Entities = agentEntities,
+                    Agents = GetComponentDataFromEntity<NavAgent>(true),
+                    Avoidances = GetComponentDataFromEntity<NavAgentAvoidance>(),
+                    IndexMap = IndexMap.AsParallelWriter(),
+                    NextPositionMap = NextPositionMap.AsParallelWriter()
                 };
-                var dt = Time.deltaTime;
+                var dt = Time.DeltaTime;
                 var hashPositionsJobHandle = hashPositionsJob.Schedule (agentCnt, 64, inputDeps);
                 var avoidanceJob = new NavAgentAvoidanceJob
                 {
-                    dt = dt,
-                    indexMap = indexMap,
-                    nextPositionMap = nextPositionMap,
-                    agents = GetComponentDataFromEntity<NavAgent>(),
-                    entities = agentEntities, // Set to deallocate
-                    navMeshQuery = navMeshQuery
+                    DeltaTime = dt,
+                    indexMap = IndexMap,
+                    nextPositionMap = NextPositionMap,
+                    Agents = GetComponentDataFromEntity<NavAgent>(),
+                    Entities = agentEntities, // Set to deallocate
+                    NavMeshQuery = _navMeshQuery
                 };
-                var avoidanceJobHandle = avoidanceJob.Schedule (indexMap, 64, hashPositionsJobHandle);
+                var avoidanceJobHandle = avoidanceJob.Schedule (IndexMap, 64, hashPositionsJobHandle);
 
 
                 return avoidanceJobHandle;
@@ -161,19 +152,19 @@ namespace NavJob.Systems
             {
                 All = new ComponentType[] {typeof(NavAgent), typeof(NavAgentAvoidance)}
             };
-            agentQuery = GetEntityQuery(agentQueryDesc);
-            navMeshQuery = new NavMeshQuery (NavMeshWorld.GetDefaultWorld (), Allocator.Persistent, 128);
-            indexMap = new NativeMultiHashMap<int, int> (100 * 1024, Allocator.Persistent);
-            nextPositionMap = new NativeMultiHashMap<int, float3> (100 * 1024, Allocator.Persistent);
-            querySystem = World.GetOrCreateSystem<NavMeshQuerySystem>();
+            _agentQuery = GetEntityQuery(agentQueryDesc);
+            _navMeshQuery = new NavMeshQuery (NavMeshWorld.GetDefaultWorld (), Allocator.Persistent, 128);
+            IndexMap = new NativeMultiHashMap<int, int> (100 * 1024, Allocator.Persistent);
+            NextPositionMap = new NativeMultiHashMap<int, float3> (100 * 1024, Allocator.Persistent);
+            _querySystem = World.GetOrCreateSystem<NavMeshQuerySystem>();
         }
 
         protected override void OnDestroy()
         {
 
-            if (indexMap.IsCreated) indexMap.Dispose ();
-            if (nextPositionMap.IsCreated) nextPositionMap.Dispose ();
-            navMeshQuery.Dispose ();
+            if (IndexMap.IsCreated) IndexMap.Dispose ();
+            if (NextPositionMap.IsCreated) NextPositionMap.Dispose ();
+            _navMeshQuery.Dispose ();
         }
     }
 

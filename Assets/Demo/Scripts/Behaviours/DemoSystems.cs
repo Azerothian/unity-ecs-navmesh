@@ -19,61 +19,60 @@ namespace Demo
 {
     public class SpawnSystem : ComponentSystem
     {
-        public int pendingSpawn;
-        private EntityManager _manager;
+        public int PendingSpawn;
 
         private PopulationSpawner _spawner;
         private int _lastSpawned;
         private float _nextUpdate;
 
         private Vector3 one = Vector3.one;
-        private EntityArchetype agent;
+        private EntityArchetype _agentArch;
 
-        private int spawned;
+        private int _spawned;
 
-        private Text spawnedText;
+        private Text _spawnedText;
 
         private Text SpawnedText
         {
             get
             {
-                if (spawnedText == null)
+                if (_spawnedText == null)
                 {
-                    spawnedText = GameObject.Find ("SpawnedText").GetComponent<Text> ();
+                    _spawnedText = GameObject.Find("SpawnedText").GetComponent<Text>();
                 }
 
-                return spawnedText;
+                return _spawnedText;
             }
         }
 
-        private PopulationSpawner GetSpawner ()
+        private PopulationSpawner GetSpawner()
         {
             if (_spawner == null)
             {
-                _spawner = Object.FindObjectOfType<PopulationSpawner> ();
+                _spawner = Object.FindObjectOfType<PopulationSpawner>();
             }
 
             return _spawner;
         }
 
-        private EntityQuery spawnQuery;
+        private EntityQuery _spawnQuery;
         protected override void OnCreate()
         {
             base.OnCreate();
 
             // create the system
-            World.CreateSystem<NavAgentSystem> ();
-            World.GetOrCreateSystem<NavAgentToTransfomMatrixSyncSystem> ();
-            buildings = World.GetOrCreateSystem<BuildingCacheSystem>();
+            World.CreateSystem<NavAgentSystem>();
+            World.GetOrCreateSystem<NavAgentToTransfomMatrixSyncSystem>();
+            _buildings = World.GetOrCreateSystem<BuildingCacheSystem>();
 
             var spawnQueryDesc = new EntityQueryDesc
             {
                 All = new ComponentType[] { typeof(PendingSpawn) }
             };
-            spawnQuery = GetEntityQuery(spawnQueryDesc);
+            _spawnQuery = GetEntityQuery(spawnQueryDesc);
 
-            agent = EntityManager.CreateArchetype (
-                typeof (NavAgent),
+            _agentArch = EntityManager.CreateArchetype(
+                typeof(NavAgent),
                 // optional avoidance
                 // typeof(NavAgentAvoidance),
                 // optional
@@ -83,23 +82,21 @@ namespace Demo
                 // typeof (SyncRotationToNavAgent),
                 // typeof (SyncPositionFromNavAgent),
                 // typeof (SyncRotationFromNavAgent),
-                typeof (LocalToWorld)
+                typeof(LocalToWorld)
             );
 
 
         }
 
-        private BuildingCacheSystem buildings;
-
-        //[Inject] private InjectData data;
+        private BuildingCacheSystem _buildings;
 
         protected override void OnUpdate()
         {
-            if (Time.time > _nextUpdate && _lastSpawned != spawned)
+            if (Time.time > _nextUpdate && _lastSpawned != _spawned)
             {
                 _nextUpdate = Time.time + 0.5f;
-                _lastSpawned = spawned;
-                SpawnedText.text = $"Spawned: {spawned} people";
+                _lastSpawned = _spawned;
+                SpawnedText.text = $"Spawned: {_spawned} people";
             }
 
             if (GetSpawner().Renderers.Length == 0)
@@ -107,26 +104,26 @@ namespace Demo
                 return;
             }
 
-            if (buildings.ResidentialBuildings.Length == 0)
+            if (_buildings.ResidentialBuildings.Length == 0)
             {
                 return;
             }
 
             var pendings = GetComponentDataFromEntity<PendingSpawn>();
-            var entities = spawnQuery.ToEntityArray(Allocator.TempJob);
+            var entities = _spawnQuery.ToEntityArray(Allocator.TempJob);
             var rootEntity = entities[0];
 
             var spawnData = pendings[rootEntity];
-            pendingSpawn = spawnData.Quantity;
+            PendingSpawn = spawnData.Quantity;
             spawnData.Quantity = 0;
             pendings[rootEntity] = spawnData;
             var manager = EntityManager;
-            for (var i = 0; i < pendingSpawn; i++)
+            for (var i = 0; i < PendingSpawn; i++)
             {
-                spawned++;
-                var position = buildings.GetResidentialBuilding ();
-                var entity = manager.CreateEntity (agent);
-                var navAgent = new NavAgent (
+                _spawned++;
+                var position = _buildings.GetResidentialBuilding();
+                var entity = manager.CreateEntity(_agentArch);
+                var navAgent = new NavAgent(
                     position,
                     Quaternion.identity,
                     spawnData.AgentStoppingDistance,
@@ -137,21 +134,15 @@ namespace Demo
                 );
                 // optional if set on the archetype
                 // manager.SetComponentData (entity, new Position { Value = position });
-                manager.SetComponentData (entity, navAgent);
+                manager.SetComponentData(entity, navAgent);
                 // optional for avoidance
                 // var navAvoidance = new NavAgentAvoidance(2f);
                 // manager.SetComponentData(entity, navAvoidance);
-                manager.AddSharedComponentData (entity, GetSpawner ().Renderers[UnityEngine.Random.Range (0, GetSpawner ().Renderers.Length)].Value);
+                manager.AddSharedComponentData(entity, GetSpawner().Renderers[UnityEngine.Random.Range(0, GetSpawner().Renderers.Length)].Value);
             }
 
             entities.Dispose();
         }
-
-        /*private struct InjectData
-        {
-            public readonly int Length;
-            public ComponentDataArray<PendingSpawn> Spawn;
-        }*/
     }
 
     public class DetectIdleAgentSystem : ComponentSystem
@@ -163,102 +154,102 @@ namespace Demo
             public NavAgent agent;
         }
 
-        private Text awaitingNavmeshText;
+        private Text _awaitingNavmeshText;
 
         private Text AwaitingNavmeshText
         {
             get
             {
-                if (awaitingNavmeshText == null)
+                if (_awaitingNavmeshText == null)
                 {
-                    awaitingNavmeshText = GameObject.Find ("AwaitingNavmeshText").GetComponent<Text> ();
+                    _awaitingNavmeshText = GameObject.Find("AwaitingNavmeshText").GetComponent<Text>();
                 }
 
-                return awaitingNavmeshText;
+                return _awaitingNavmeshText;
             }
         }
 
-        private Text cachedPathText;
+        private Text _cachedPathText;
 
         private Text CachedPathText
         {
             get
             {
-                if (cachedPathText == null)
+                if (_cachedPathText == null)
                 {
-                    cachedPathText = GameObject.Find ("CachedPathText").GetComponent<Text> ();
+                    _cachedPathText = GameObject.Find("CachedPathText").GetComponent<Text>();
                 }
 
-                return cachedPathText;
+                return _cachedPathText;
             }
         }
 
         private float _nextUpdate;
 
-        private NativeQueue<AgentData> needsPath = new NativeQueue<AgentData> (Allocator.Persistent);
+        private NativeQueue<AgentData> _needsPath = new NativeQueue<AgentData>(Allocator.Persistent);
 
         [BurstCompile]
         private struct DetectIdleAgentJob : IJobParallelFor
         {
             [ReadOnly]
             [DeallocateOnJobCompletion]
-            public NativeArray<Entity> entities;
+            public NativeArray<Entity> Entities;
             [NativeDisableParallelForRestriction]
-            public ComponentDataFromEntity<NavAgent> agents;
-            public NativeQueue<AgentData>.ParallelWriter needsPath;
+            public ComponentDataFromEntity<NavAgent> Agents;
+            public NativeQueue<AgentData>.ParallelWriter NeedsPath;
 
-            public void Execute (int index)
+            public void Execute(int index)
             {
-                var entity = entities[index];
-                var agent = agents[entity];
+                var entity = Entities[index];
+                var agent = Agents[entity];
                 if (agent.status == AgentStatus.Idle)
                 {
-                    needsPath.Enqueue (new AgentData { index = index, agent = agent, entity = entity });
+                    NeedsPath.Enqueue(new AgentData { index = index, agent = agent, entity = entity });
                     agent.status = AgentStatus.PathQueued;
-                    agents[entity] = agent;
+                    Agents[entity] = agent;
                 }
             }
         }
 
         private struct SetNextPathJob : IJob
         {
-            public NativeQueue<AgentData> needsPath;
-            public void Execute ()
+            public NativeQueue<AgentData> NeedsPath;
+            public void Execute()
             {
-                while (needsPath.TryDequeue (out AgentData item))
+                while (NeedsPath.TryDequeue(out AgentData item))
                 {
-                    var destination = BuildingCacheSystem.GetCommercialBuilding ();
-                    NavAgentSystem.SetDestinationStatic (item.entity, item.agent, destination, item.agent.areaMask);
+                    var destination = BuildingCacheSystem.GetCommercialBuilding();
+                    NavAgentSystem.SetDestinationStatic(item.entity, item.agent, destination, item.agent.areaMask);
                 }
             }
         }
 
-        private EntityQuery agentQuery;
-        NavMeshQuerySystem navQuery;
+        private EntityQuery _agentQuery;
+        private NavMeshQuerySystem _navQuery;
 
-        protected override void OnUpdate ()
+        protected override void OnUpdate()
         {
             if (Time.time > _nextUpdate)
             {
-                AwaitingNavmeshText.text = $"Awaiting Path: {navQuery.PendingCount} people";
-                CachedPathText.text = $"Cached Paths: {navQuery.CachedCount}";
+                AwaitingNavmeshText.text = $"Awaiting Path: {_navQuery.PendingCount} people";
+                CachedPathText.text = $"Cached Paths: {_navQuery.CachedCount}";
                 _nextUpdate = Time.time + 0.5f;
             }
 
-            var entityCnt = agentQuery.CalculateEntityCount();
-            var entities = agentQuery.ToEntityArray(Allocator.TempJob);
+            var entityCnt = _agentQuery.CalculateEntityCount();
+            var entities = _agentQuery.ToEntityArray(Allocator.TempJob);
 
             var inputDeps = new DetectIdleAgentJob
             {
-                entities = entities,
-                agents = GetComponentDataFromEntity<NavAgent>(),
-                needsPath = needsPath.AsParallelWriter()
-            }.Schedule (entityCnt, 64);
+                Entities = entities,
+                Agents = GetComponentDataFromEntity<NavAgent>(),
+                NeedsPath = _needsPath.AsParallelWriter()
+            }.Schedule(entityCnt, 64);
             inputDeps = new SetNextPathJob
             {
-                needsPath = needsPath
-            }.Schedule (inputDeps);
-            inputDeps.Complete ();
+                NeedsPath = _needsPath
+            }.Schedule(inputDeps);
+            inputDeps.Complete();
         }
 
         protected override void OnCreate()
@@ -268,68 +259,68 @@ namespace Demo
             {
                 All = new ComponentType[] { typeof(NavAgent) }
             };
-            agentQuery = GetEntityQuery(agentQueryDesc);
-            navQuery = World.GetOrCreateSystem<NavMeshQuerySystem>();
+            _agentQuery = GetEntityQuery(agentQueryDesc);
+            _navQuery = World.GetOrCreateSystem<NavMeshQuerySystem>();
         }
 
         protected override void OnDestroy()
         {
-            needsPath.Dispose ();
+            _needsPath.Dispose();
         }
     }
 
     public class BuildingCacheSystem : ComponentSystem
     {
-        public NativeList<Vector3> CommercialBuildings = new NativeList<Vector3> (Allocator.Persistent);
-        public NativeList<Vector3> ResidentialBuildings = new NativeList<Vector3> (Allocator.Persistent);
-        private PopulationSpawner spawner;
-        private int nextCommercial = 0;
-        private int nextResidential = 0;
+        public NativeList<Vector3> CommercialBuildings = new NativeList<Vector3>(Allocator.Persistent);
+        public NativeList<Vector3> ResidentialBuildings = new NativeList<Vector3>(Allocator.Persistent);
+        private PopulationSpawner _spawner;
+        private int _nextCommercial = 0;
+        private int _nextResidential = 0;
         //private EntityQuery buildingQuery;
-        private static BuildingCacheSystem instance;
+        private static BuildingCacheSystem _instance;
 
         protected override void OnCreate()
         {
-            instance = this;
+            _instance = this;
         }
 
         private PopulationSpawner Spawner
         {
             get
             {
-                if (spawner == null)
+                if (_spawner == null)
                 {
-                    spawner = Object.FindObjectOfType<PopulationSpawner> ();
+                    _spawner = Object.FindObjectOfType<PopulationSpawner>();
                 }
 
-                return spawner;
+                return _spawner;
             }
         }
 
-        public Vector3 GetResidentialBuilding ()
+        public Vector3 GetResidentialBuilding()
         {
-            nextResidential++;
-            if (nextResidential >= ResidentialBuildings.Length)
+            _nextResidential++;
+            if (_nextResidential >= ResidentialBuildings.Length)
             {
-                nextResidential = 0;
+                _nextResidential = 0;
             }
 
-            return ResidentialBuildings[nextResidential];
+            return ResidentialBuildings[_nextResidential];
         }
 
-        public static Vector3 GetCommercialBuilding ()
+        public static Vector3 GetCommercialBuilding()
         {
-            var building = instance.CommercialBuildings[0];
+            var building = _instance.CommercialBuildings[0];
             try
             {
-                if (instance.nextCommercial < instance.CommercialBuildings.Length)
+                if (_instance._nextCommercial < _instance.CommercialBuildings.Length)
                 {
-                    building = instance.CommercialBuildings[instance.nextCommercial];
-                    instance.nextCommercial++;
+                    building = _instance.CommercialBuildings[_instance._nextCommercial];
+                    _instance._nextCommercial++;
                 }
                 else
                 {
-                    instance.nextCommercial = 0;
+                    _instance._nextCommercial = 0;
                 }
                 return building;
             }
@@ -339,7 +330,7 @@ namespace Demo
             }
         }
 
-        protected override void OnUpdate ()
+        protected override void OnUpdate()
         {
 
             Entities.WithAll<BuildingData>().ForEach((ref BuildingData building) =>
@@ -355,31 +346,12 @@ namespace Demo
 
                 PostUpdateCommands.RemoveComponent<BuildingData>(building.Entity);
             });
-
-            /*var buildings = buildingQuery.ToComponentDataArray<BuildingData>(Allocator.Temp);
-            
-            for (var i = 0; i < buildings.Length; i++)
-            {
-                var building = buildings[i];
-                if (building.Type == BuildingType.Residential)
-                {
-                    ResidentialBuildings.Add (building.Position);
-                }
-                else
-                {
-                    CommercialBuildings.Add (building.Position);
-                }
-
-                PostUpdateCommands.RemoveComponent<BuildingData> (building.Entity);
-            }
-
-            buildings.Dispose();*/
         }
 
         protected override void OnDestroy()
         {
-            ResidentialBuildings.Dispose ();
-            CommercialBuildings.Dispose ();
+            ResidentialBuildings.Dispose();
+            CommercialBuildings.Dispose();
         }
     }
 }
