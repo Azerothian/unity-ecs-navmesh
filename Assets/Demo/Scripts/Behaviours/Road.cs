@@ -7,10 +7,10 @@ using UnityEngine.AI;
 
 namespace Demo.Behaviours
 {
-    [RequireComponent (typeof (MeshCollider), typeof (NavMeshModifier))]
+    [RequireComponent(typeof(MeshCollider), typeof(NavMeshModifier))]
     public class Road : MonoBehaviour
     {
-        private void Start ()
+        private void Start()
         {
             gameObject.isStatic = true;
             gameObject.layer = 10;

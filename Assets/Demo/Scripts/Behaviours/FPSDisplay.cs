@@ -11,12 +11,12 @@ namespace Demo.Behaviours
         float fps;
         float nextUpdate;
 
-        void Start ()
+        void Start()
         {
-            text = GetComponent<Text> ();
+            text = GetComponent<Text>();
         }
 
-        void Update ()
+        void Update()
         {
             deltaTime += (Time.unscaledDeltaTime - deltaTime) * 0.1f;
             msec = deltaTime * 1000.0f;
@@ -24,7 +24,7 @@ namespace Demo.Behaviours
             if (Time.time > nextUpdate)
             {
                 nextUpdate = Time.time + 0.5f;
-                text.text = string.Format ("FPS: {0:0.0} ms ({1:0.} fps)", msec, fps);
+                text.text = string.Format("FPS: {0:0.0} ms ({1:0.} fps)", msec, fps);
             }
         }
     }

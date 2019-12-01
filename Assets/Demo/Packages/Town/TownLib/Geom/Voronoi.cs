@@ -38,7 +38,7 @@ namespace Town.Geom
         public void AddPoint(Vector2 point)
         {
             var toSplit = Enumerable.Where(Triangles, tr => (point - tr.C).Length < tr.R).ToList();
-                
+
             if (toSplit.Any())
             {
                 Points.Add(point);
@@ -315,12 +315,12 @@ namespace Town.Geom
                     return -1;
                 }
 
-                if (Math.Abs((float) x1) < 0.1f && Math.Abs((float) x2) < 0.1f)
+                if (Math.Abs((float)x1) < 0.1f && Math.Abs((float)x2) < 0.1f)
                 {
                     return y2 > y1 ? 1 : -1;
                 }
 
-                return Math.Sign((float) (x2 * y1 - x1 * y2));
+                return Math.Sign((float)(x2 * y1 - x1 * y2));
             }
         }
     }

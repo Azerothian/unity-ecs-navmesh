@@ -15,16 +15,16 @@ namespace Demo.Behaviours
         Commercial
     }
 
-    [RequireComponent (typeof (GameObjectEntity))]
+    [RequireComponent(typeof(GameObjectEntity))]
     public class Building : MonoBehaviour
     {
 
         public Vector3 Position;
         public BuildingType Type;
 
-        private void Start ()
+        private void Start()
         {
-            var mesh = GetComponent<MeshFilter> ().sharedMesh;
+            var mesh = GetComponent<MeshFilter>().sharedMesh;
             foreach (var vertex in mesh.vertices)
             {
                 Position.x += vertex.x;
@@ -33,16 +33,16 @@ namespace Demo.Behaviours
 
             Position.x /= mesh.vertexCount;
             Position.z /= mesh.vertexCount;
-            Position = transform.TransformPoint (Position);
+            Position = transform.TransformPoint(Position);
 
-            if (mesh.vertexCount == 0 || double.IsNaN (Position.z))
+            if (mesh.vertexCount == 0 || double.IsNaN(Position.z))
             {
                 return;
             }
 
             gameObject.isStatic = true;
 
-            if (gameObject.name.Contains ("Home"))
+            if (gameObject.name.Contains("Home"))
             {
                 Type = BuildingType.Residential;
             }
@@ -51,10 +51,10 @@ namespace Demo.Behaviours
                 Type = BuildingType.Commercial;
             }
 
-            var entity = GetComponent<GameObjectEntity> ().Entity;
-            var manager = GetComponent<GameObjectEntity> ().EntityManager;
-            manager.AddComponent (entity, typeof (BuildingData));
-            manager.SetComponentData (entity, new BuildingData { Entity = entity, Type = Type, Position = Position });
+            var entity = GetComponent<GameObjectEntity>().Entity;
+            var manager = GetComponent<GameObjectEntity>().EntityManager;
+            manager.AddComponent(entity, typeof(BuildingData));
+            manager.SetComponentData(entity, new BuildingData { Entity = entity, Type = Type, Position = Position });
         }
     }
 }

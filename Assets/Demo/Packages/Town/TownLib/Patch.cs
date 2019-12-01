@@ -8,21 +8,21 @@ namespace Town
     public class Patch : IEquatable<Patch>
     {
         private static int _id;
-        private Patch (Town town, Geom.Polygon shape)
+        private Patch(Town town, Geom.Polygon shape)
         {
             Town = town;
             Shape = shape;
             Id = ++_id;
         }
 
-        public static Patch FromRegion (Town town, Region region)
+        public static Patch FromRegion(Town town, Region region)
         {
-            return new Patch (town, new Geom.Polygon (region.Vertices.Select (vv => vv.C)));
+            return new Patch(town, new Geom.Polygon(region.Vertices.Select(vv => vv.C)));
         }
 
-        public static Patch FromPolygon (Town town, Geom.Polygon polygon)
+        public static Patch FromPolygon(Town town, Geom.Polygon polygon)
         {
-            return new Patch (town, polygon);
+            return new Patch(town, polygon);
         }
 
         public int Id { get; }
@@ -30,7 +30,7 @@ namespace Town
         public Town Town { get; }
         public Area Area { get; set; }
         public Polygon Shape { get; }
-        public List<Edge> Edges => Shape.GetEdges ();
+        public List<Edge> Edges => Shape.GetEdges();
         public bool WithinCity { get; set; }
         public bool WithinWalls { get; set; }
         public bool Water { get; set; }
@@ -38,55 +38,55 @@ namespace Town
 
         public Vector2 Center => Shape.Center;
 
-        public bool Neighbours (Patch other)
+        public bool Neighbours(Patch other)
         {
-            if (Equals (other))
+            if (Equals(other))
             {
                 // Not neighbour with itself
                 return false;
             }
-            return Shape.Vertices.Any (v => other.Shape.Vertices.Contains (v));
+            return Shape.Vertices.Any(v => other.Shape.Vertices.Contains(v));
             //return Edges.Any(e => other.Edges.Any(oe => oe.Equals(e)));
         }
 
-        public IEnumerable<Patch> GetAllNeighbours ()
+        public IEnumerable<Patch> GetAllNeighbours()
         {
-            return Town.Patches.Where (Neighbours);
+            return Town.Patches.Where(Neighbours);
         }
 
-        public bool Equals (Patch other)
+        public bool Equals(Patch other)
         {
-            if (ReferenceEquals (null, other))
+            if (ReferenceEquals(null, other))
             {
                 return false;
             }
-            if (ReferenceEquals (this, other))
+            if (ReferenceEquals(this, other))
             {
                 return true;
             }
-            return Equals (Shape, other.Shape);
+            return Equals(Shape, other.Shape);
         }
 
-        public override bool Equals (object obj)
+        public override bool Equals(object obj)
         {
-            if (ReferenceEquals (null, obj))
+            if (ReferenceEquals(null, obj))
             {
                 return false;
             }
-            if (ReferenceEquals (this, obj))
+            if (ReferenceEquals(this, obj))
             {
                 return true;
             }
-            if (obj.GetType () != this.GetType ())
+            if (obj.GetType() != this.GetType())
             {
                 return false;
             }
-            return Equals ((Patch) obj);
+            return Equals((Patch)obj);
         }
 
-        public override int GetHashCode ()
+        public override int GetHashCode()
         {
-            return (Shape != null ? Shape.GetHashCode () : 0);
+            return (Shape != null ? Shape.GetHashCode() : 0);
         }
     }
 }

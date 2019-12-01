@@ -24,30 +24,30 @@ namespace Demo.Behaviours
         EntityManager entityManager;
         Entity thisEntity;
 
-        private void Start ()
+        private void Start()
         {
-            Renderers = FindObjectsOfType<RenderMeshProxy> ();
+            Renderers = FindObjectsOfType<RenderMeshProxy>();
             entityManager = World.Active.EntityManager;
-            thisEntity = GetComponent<GameObjectEntity> ().Entity;
-            entityManager.AddComponent (thisEntity, typeof (PendingSpawn));
-            entityManager.SetComponentData (thisEntity, new PendingSpawn ()
+            thisEntity = GetComponent<GameObjectEntity>().Entity;
+            entityManager.AddComponent(thisEntity, typeof(PendingSpawn));
+            entityManager.SetComponentData(thisEntity, new PendingSpawn()
             {
                 Quantity = InitialSpawn,
-                    AgentStoppingDistance = AgentStoppingDistance,
-                    AgentAcceleration = AgentAcceleration,
-                    AgentMoveSpeed = AgentMoveSpeed,
-                    AgentRotationSpeed = AgentRotationSpeed,
-                    AgentAreaMask = AgentAreaMask,
-                    AgentAvoidanceDiameter = AgentAvoidanceDiameter,
+                AgentStoppingDistance = AgentStoppingDistance,
+                AgentAcceleration = AgentAcceleration,
+                AgentMoveSpeed = AgentMoveSpeed,
+                AgentRotationSpeed = AgentRotationSpeed,
+                AgentAreaMask = AgentAreaMask,
+                AgentAvoidanceDiameter = AgentAvoidanceDiameter,
             });
-            buildNavMesh = FindObjectOfType<BuildNavMesh> ();
+            buildNavMesh = FindObjectOfType<BuildNavMesh>();
         }
 
-        public void SpawnPeople (int quantity)
+        public void SpawnPeople(int quantity)
         {
-            var data = entityManager.GetComponentData<PendingSpawn> (thisEntity);
+            var data = entityManager.GetComponentData<PendingSpawn>(thisEntity);
             data.Quantity += quantity;
-            entityManager.SetComponentData (thisEntity, data);
+            entityManager.SetComponentData(thisEntity, data);
         }
     }
 }

@@ -5,15 +5,15 @@ namespace Town
 {
     public class TownGeometry
     {
-        public TownGeometry ()
+        public TownGeometry()
         {
-            Buildings = new List<Building> ();
-            Walls = new List<Edge> ();
-            Towers = new List<Vector2> ();
-            Gates = new List<Vector2> ();
-            Roads = new List<List<Vector2>> ();
-            Overlay = new List<Patch> ();
-            Water = new List<Polygon> ();
+            Buildings = new List<Building>();
+            Walls = new List<Edge>();
+            Towers = new List<Vector2>();
+            Gates = new List<Vector2>();
+            Roads = new List<List<Vector2>>();
+            Overlay = new List<Patch>();
+            Water = new List<Polygon>();
         }
 
         public List<Building> Buildings { get; }

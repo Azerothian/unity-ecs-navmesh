@@ -11,17 +11,17 @@ namespace Demo.Behaviours
         NavMeshSurface surface;
         public bool IsBuilt = false;
 
-        public void Build (System.Action<AsyncOperation> callback = null)
+        public void Build(System.Action<AsyncOperation> callback = null)
         {
             IsBuilt = false;
-            surface = GetComponent<NavMeshSurface> ();
-            var operation = surface.UpdateNavMesh (surface.navMeshData);
+            surface = GetComponent<NavMeshSurface>();
+            var operation = surface.UpdateNavMesh(surface.navMeshData);
             operation.completed += BuildComplete;
             if (callback != null)
                 operation.completed += callback;
         }
 
-        private void BuildComplete (AsyncOperation operation)
+        private void BuildComplete(AsyncOperation operation)
         {
             IsBuilt = true;
         }

@@ -32,7 +32,7 @@ namespace NavJob.Systems
         }
 
         private NativeQueue<AgentData> _needsWaypoint;
-        private readonly ConcurrentDictionary<int, Vector3[]> _waypoints = new ConcurrentDictionary<int, Vector3[]> ();
+        private readonly ConcurrentDictionary<int, Vector3[]> _waypoints = new ConcurrentDictionary<int, Vector3[]>();
         private NativeHashMap<int, AgentData> _pathFindingData;
 
         [BurstCompile]
@@ -46,7 +46,7 @@ namespace NavJob.Systems
             public ComponentDataFromEntity<NavAgent> Agents;
             public NativeQueue<AgentData>.ParallelWriter NeedsWaypoint;
 
-            public void Execute (int index)
+            public void Execute(int index)
             {
                 var entity = Entities[index];
                 var agent = Agents[entity];
@@ -57,7 +57,7 @@ namespace NavJob.Systems
 
                 if (agent.nextWaypointIndex != agent.totalWaypoints)
                 {
-                    NeedsWaypoint.Enqueue (new AgentData { agent = agent, entity = entity, index = index });
+                    NeedsWaypoint.Enqueue(new AgentData { agent = agent, entity = entity, index = index });
                 }
                 else if (navMeshQuerySystemVersion != agent.queryVersion || agent.nextWaypointIndex == agent.totalWaypoints)
                 {
@@ -73,17 +73,17 @@ namespace NavJob.Systems
         {
             public ComponentDataFromEntity<NavAgent> Agents;
             public NativeQueue<AgentData> NeedsWaypoint;
-            public void Execute ()
+            public void Execute()
             {
                 // TODO: Don't like how this one converted...
-                while (NeedsWaypoint.TryDequeue (out AgentData item))
+                while (NeedsWaypoint.TryDequeue(out AgentData item))
                 {
                     var entity = item.entity;
-                    if (NavAgentSystem.Instance._waypoints.TryGetValue (entity.Index, out Vector3[] currentWaypoints))
+                    if (NavAgentSystem.Instance._waypoints.TryGetValue(entity.Index, out Vector3[] currentWaypoints))
                     {
                         var agent = item.agent;
                         agent.currentWaypoint = currentWaypoints[agent.nextWaypointIndex];
-                        agent.remainingDistance = Vector3.Distance (agent.position, agent.currentWaypoint);
+                        agent.remainingDistance = Vector3.Distance(agent.position, agent.currentWaypoint);
                         agent.nextWaypointIndex++;
                         Agents[entity] = agent;
                     }
@@ -104,7 +104,7 @@ namespace NavJob.Systems
             [NativeDisableParallelForRestriction]
             public ComponentDataFromEntity<NavAgent> Agents;
 
-            public void Execute (int index)
+            public void Execute(int index)
             {
                 var entity = Entities[index];
 
@@ -116,28 +116,28 @@ namespace NavJob.Systems
 
                 if (agent.remainingDistance > 0)
                 {
-                    agent.currentMoveSpeed = Mathf.Lerp (agent.currentMoveSpeed, agent.moveSpeed, DeltaTime * agent.acceleration);
+                    agent.currentMoveSpeed = Mathf.Lerp(agent.currentMoveSpeed, agent.moveSpeed, DeltaTime * agent.acceleration);
                     // todo: deceleration
                     if (agent.nextPosition.x != Mathf.Infinity)
                     {
                         agent.position = agent.nextPosition;
                     }
-                    var heading = (Vector3) (agent.currentWaypoint - agent.position);
+                    var heading = (Vector3)(agent.currentWaypoint - agent.position);
                     agent.remainingDistance = heading.magnitude;
                     if (agent.remainingDistance > 0.001f)
                     {
-                        var targetRotation = Quaternion.LookRotation (heading, Up).eulerAngles;
+                        var targetRotation = Quaternion.LookRotation(heading, Up).eulerAngles;
                         targetRotation.x = targetRotation.z = 0;
                         if (agent.remainingDistance < 1)
                         {
-                            agent.rotation = Quaternion.Euler (targetRotation);
+                            agent.rotation = Quaternion.Euler(targetRotation);
                         }
                         else
                         {
-                            agent.rotation = Quaternion.Slerp (agent.rotation, Quaternion.Euler (targetRotation), DeltaTime * agent.rotationSpeed);
+                            agent.rotation = Quaternion.Slerp(agent.rotation, Quaternion.Euler(targetRotation), DeltaTime * agent.rotationSpeed);
                         }
                     }
-                    var forward = math.forward (agent.rotation) * agent.currentMoveSpeed * DeltaTime;
+                    var forward = math.forward(agent.rotation) * agent.currentMoveSpeed * DeltaTime;
                     agent.nextPosition = agent.position + forward;
                     Agents[entity] = agent;
                 }
@@ -156,24 +156,25 @@ namespace NavJob.Systems
         private PathSuccessBarrier _pathSuccessBarrier;
         private PathErrorBarrier _pathErrorBarrier;
 
-        protected override JobHandle OnUpdate (JobHandle inputDeps)
+        protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
             var entityCnt = _agentQuery.CalculateEntityCount();
             var entities = _agentQuery.ToEntityArray(Allocator.TempJob);
-            
+
             var dt = Time.DeltaTime;
-            inputDeps = new DetectNextWaypointJob {
+            inputDeps = new DetectNextWaypointJob
+            {
                 Entities = entities,
                 Agents = GetComponentDataFromEntity<NavAgent>(),
                 NeedsWaypoint = _needsWaypoint.AsParallelWriter(),
                 navMeshQuerySystemVersion = _querySystem.Version
-            }.Schedule (entityCnt, 64, inputDeps);
+            }.Schedule(entityCnt, 64, inputDeps);
 
             inputDeps = new SetNextWaypointJob
             {
                 Agents = GetComponentDataFromEntity<NavAgent>(),
                 NeedsWaypoint = _needsWaypoint
-            }.Schedule (inputDeps);
+            }.Schedule(inputDeps);
 
             inputDeps = new MovementJob
             {
@@ -182,7 +183,7 @@ namespace NavJob.Systems
                 One = Vector3.one,
                 Entities = entities,
                 Agents = GetComponentDataFromEntity<NavAgent>()
-            }.Schedule (entityCnt, 64, inputDeps);
+            }.Schedule(entityCnt, 64, inputDeps);
 
             return inputDeps;
         }
@@ -194,16 +195,16 @@ namespace NavJob.Systems
         /// <param name="agent"></param>
         /// <param name="destination"></param>
         /// <param name="areas"></param>
-        public void SetDestination (Entity entity, NavAgent agent, Vector3 destination, int areas = -1)
+        public void SetDestination(Entity entity, NavAgent agent, Vector3 destination, int areas = -1)
         {
-            if (_pathFindingData.TryAdd (entity.Index, new AgentData { index = entity.Index, entity = entity, agent = agent }))
+            if (_pathFindingData.TryAdd(entity.Index, new AgentData { index = entity.Index, entity = entity, agent = agent }))
             {
-                var command = _setDestinationBarrier.CreateCommandBuffer ();
+                var command = _setDestinationBarrier.CreateCommandBuffer();
                 agent.status = AgentStatus.PathQueued;
                 agent.destination = destination;
                 agent.queryVersion = _querySystem.Version;
-                command.SetComponent<NavAgent> (entity, agent);
-                _querySystem.RequestPath (entity.Index, agent.position, agent.destination, areas);
+                command.SetComponent<NavAgent>(entity, agent);
+                _querySystem.RequestPath(entity.Index, agent.position, agent.destination, areas);
             }
         }
 
@@ -213,9 +214,9 @@ namespace NavJob.Systems
         /// <param name="entity"></param>
         /// <param name="agent"></param>
         /// <param name="destination"></param>
-        public static void SetDestinationStatic (Entity entity, NavAgent agent, Vector3 destination, int areas = -1)
+        public static void SetDestinationStatic(Entity entity, NavAgent agent, Vector3 destination, int areas = -1)
         {
-            Instance.SetDestination (entity, agent, destination, areas);
+            Instance.SetDestination(entity, agent, destination, areas);
         }
 
         protected static NavAgentSystem Instance;
@@ -229,8 +230,8 @@ namespace NavJob.Systems
             _pathSuccessBarrier = World.GetOrCreateSystem<PathSuccessBarrier>();
             _pathErrorBarrier = World.GetOrCreateSystem<PathErrorBarrier>();
 
-            _querySystem.RegisterPathResolvedCallback (OnPathSuccess);
-            _querySystem.RegisterPathFailedCallback (OnPathError);
+            _querySystem.RegisterPathResolvedCallback(OnPathSuccess);
+            _querySystem.RegisterPathFailedCallback(OnPathError);
 
             var agentQueryDesc = new EntityQueryDesc
             {
@@ -239,44 +240,44 @@ namespace NavJob.Systems
             _agentQuery = GetEntityQuery(agentQueryDesc);
 
             _needsWaypoint = new NativeQueue<AgentData>(Allocator.Persistent);
-            _pathFindingData = new NativeHashMap<int, AgentData> (0, Allocator.Persistent);
+            _pathFindingData = new NativeHashMap<int, AgentData>(0, Allocator.Persistent);
         }
 
         protected override void OnDestroy()
         {
-            _needsWaypoint.Dispose ();
-            _pathFindingData.Dispose ();
+            _needsWaypoint.Dispose();
+            _pathFindingData.Dispose();
         }
 
-        private void SetWaypoint (Entity entity, NavAgent agent, Vector3[] newWaypoints)
+        private void SetWaypoint(Entity entity, NavAgent agent, Vector3[] newWaypoints)
         {
             _waypoints[entity.Index] = newWaypoints;
-            var command = _pathSuccessBarrier.CreateCommandBuffer ();
+            var command = _pathSuccessBarrier.CreateCommandBuffer();
             agent.status = AgentStatus.Moving;
             agent.nextWaypointIndex = 1;
             agent.totalWaypoints = newWaypoints.Length;
             agent.currentWaypoint = newWaypoints[0];
-            agent.remainingDistance = Vector3.Distance (agent.position, agent.currentWaypoint);
-            command.SetComponent<NavAgent> (entity, agent);
+            agent.remainingDistance = Vector3.Distance(agent.position, agent.currentWaypoint);
+            command.SetComponent<NavAgent>(entity, agent);
         }
 
-        private void OnPathSuccess (int index, Vector3[] waypoints)
+        private void OnPathSuccess(int index, Vector3[] waypoints)
         {
-            if (_pathFindingData.TryGetValue (index, out AgentData entry))
+            if (_pathFindingData.TryGetValue(index, out AgentData entry))
             {
-                SetWaypoint (entry.entity, entry.agent, waypoints);
-                _pathFindingData.Remove (index);
+                SetWaypoint(entry.entity, entry.agent, waypoints);
+                _pathFindingData.Remove(index);
             }
         }
 
-        private void OnPathError (int index, PathfindingFailedReason reason)
+        private void OnPathError(int index, PathfindingFailedReason reason)
         {
-            if (_pathFindingData.TryGetValue (index, out AgentData entry))
+            if (_pathFindingData.TryGetValue(index, out AgentData entry))
             {
                 entry.agent.status = AgentStatus.Idle;
-                var command = _pathErrorBarrier.CreateCommandBuffer ();
-                command.SetComponent<NavAgent> (entry.entity, entry.agent);
-                _pathFindingData.Remove (index);
+                var command = _pathErrorBarrier.CreateCommandBuffer();
+                command.SetComponent<NavAgent>(entry.entity, entry.agent);
+                _pathFindingData.Remove(index);
             }
         }
     }

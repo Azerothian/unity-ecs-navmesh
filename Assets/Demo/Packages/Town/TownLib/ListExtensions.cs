@@ -19,7 +19,7 @@ namespace Town
             var v1 = list[0];
             var v2 = list[1];
 
-            var newVertices = new List<Vector2> {list[0]};
+            var newVertices = new List<Vector2> { list[0] };
 
             for (var v = 1; v < list.Count - 1; v++)
             {

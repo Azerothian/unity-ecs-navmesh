@@ -35,9 +35,9 @@ namespace NavJob.Systems
             [ReadOnly] public NativeMultiHashMap<int, float3> nextPositionMap;
             [ReadOnly] public NavMeshQuery NavMeshQuery;
             public float DeltaTime;
-            public void ExecuteFirst (int index) { }
+            public void ExecuteFirst(int index) { }
 
-            public void ExecuteNext (int firstIndex, int index)
+            public void ExecuteNext(int firstIndex, int index)
             {
                 var entity = Entities[index];
                 var agent = Agents[entity];
@@ -51,15 +51,15 @@ namespace NavJob.Systems
                 if (agent.nextWaypointIndex != agent.totalWaypoints)
                 {
                     var offsetWaypoint = agent.currentWaypoint + drift;
-                    var waypointInfo = NavMeshQuery.MapLocation (offsetWaypoint, Vector3.one * 3f, 0, agent.areaMask);
-                    if (NavMeshQuery.IsValid (waypointInfo))
+                    var waypointInfo = NavMeshQuery.MapLocation(offsetWaypoint, Vector3.one * 3f, 0, agent.areaMask);
+                    if (NavMeshQuery.IsValid(waypointInfo))
                     {
                         agent.currentWaypoint = waypointInfo.position;
                     }
                 }
-                agent.currentMoveSpeed = Mathf.Max (agent.currentMoveSpeed / 2f, 0.5f);
-                var positionInfo = NavMeshQuery.MapLocation (agent.position + drift, Vector3.one * 3f, 0, agent.areaMask);
-                if (NavMeshQuery.IsValid (positionInfo))
+                agent.currentMoveSpeed = Mathf.Max(agent.currentMoveSpeed / 2f, 0.5f);
+                var positionInfo = NavMeshQuery.MapLocation(agent.position + drift, Vector3.one * 3f, 0, agent.areaMask);
+                if (NavMeshQuery.IsValid(positionInfo))
                 {
                     agent.nextPosition = positionInfo.position;
                 }
@@ -83,22 +83,22 @@ namespace NavJob.Systems
             public NativeMultiHashMap<int, float3>.ParallelWriter NextPositionMap;
             public int MapSize;
 
-            public void Execute (int index)
+            public void Execute(int index)
             {
                 var entity = Entities[index];
                 var agent = Agents[entity];
                 var avoidance = Avoidances[entity];
-                var hash = Hash (agent.position, avoidance.radius);
-                IndexMap.Add (hash, index);
-                NextPositionMap.Add (hash, agent.nextPosition);
+                var hash = Hash(agent.position, avoidance.radius);
+                IndexMap.Add(hash, index);
+                NextPositionMap.Add(hash, agent.nextPosition);
                 avoidance.partition = hash;
                 Avoidances[entity] = avoidance;
             }
 
-            public int Hash (float3 position, float radius)
+            public int Hash(float3 position, float radius)
             {
-                int ix = Mathf.RoundToInt ((position.x / radius) * radius);
-                int iz = Mathf.RoundToInt ((position.z / radius) * radius);
+                int ix = Mathf.RoundToInt((position.x / radius) * radius);
+                int iz = Mathf.RoundToInt((position.z / radius) * radius);
                 return ix * MapSize + iz;
             }
         }
@@ -106,7 +106,7 @@ namespace NavJob.Systems
         private EntityQuery _agentQuery;
 
         NavMeshQuerySystem _querySystem;
-        protected override JobHandle OnUpdate (JobHandle inputDeps)
+        protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
             // In theory, JobComponentSystem will by default not run OnUpdate if the agentQuery is empty to begin with.
             var agentCnt = _agentQuery.CalculateEntityCount();
@@ -115,8 +115,8 @@ namespace NavJob.Systems
             {
                 var agentEntities = _agentQuery.ToEntityArray(Allocator.TempJob);
 
-                IndexMap.Clear ();
-                NextPositionMap.Clear ();
+                IndexMap.Clear();
+                NextPositionMap.Clear();
 
                 var hashPositionsJob = new HashPositionsJob
                 {
@@ -128,7 +128,7 @@ namespace NavJob.Systems
                     NextPositionMap = NextPositionMap.AsParallelWriter()
                 };
                 var dt = Time.DeltaTime;
-                var hashPositionsJobHandle = hashPositionsJob.Schedule (agentCnt, 64, inputDeps);
+                var hashPositionsJobHandle = hashPositionsJob.Schedule(agentCnt, 64, inputDeps);
                 var avoidanceJob = new NavAgentAvoidanceJob
                 {
                     DeltaTime = dt,
@@ -138,7 +138,7 @@ namespace NavJob.Systems
                     Entities = agentEntities, // Set to deallocate
                     NavMeshQuery = _navMeshQuery
                 };
-                var avoidanceJobHandle = avoidanceJob.Schedule (IndexMap, 64, hashPositionsJobHandle);
+                var avoidanceJobHandle = avoidanceJob.Schedule(IndexMap, 64, hashPositionsJobHandle);
 
 
                 return avoidanceJobHandle;
@@ -150,21 +150,21 @@ namespace NavJob.Systems
         {
             var agentQueryDesc = new EntityQueryDesc
             {
-                All = new ComponentType[] {typeof(NavAgent), typeof(NavAgentAvoidance)}
+                All = new ComponentType[] { typeof(NavAgent), typeof(NavAgentAvoidance) }
             };
             _agentQuery = GetEntityQuery(agentQueryDesc);
-            _navMeshQuery = new NavMeshQuery (NavMeshWorld.GetDefaultWorld (), Allocator.Persistent, 128);
-            IndexMap = new NativeMultiHashMap<int, int> (100 * 1024, Allocator.Persistent);
-            NextPositionMap = new NativeMultiHashMap<int, float3> (100 * 1024, Allocator.Persistent);
+            _navMeshQuery = new NavMeshQuery(NavMeshWorld.GetDefaultWorld(), Allocator.Persistent, 128);
+            IndexMap = new NativeMultiHashMap<int, int>(100 * 1024, Allocator.Persistent);
+            NextPositionMap = new NativeMultiHashMap<int, float3>(100 * 1024, Allocator.Persistent);
             _querySystem = World.GetOrCreateSystem<NavMeshQuerySystem>();
         }
 
         protected override void OnDestroy()
         {
 
-            if (IndexMap.IsCreated) IndexMap.Dispose ();
-            if (NextPositionMap.IsCreated) NextPositionMap.Dispose ();
-            _navMeshQuery.Dispose ();
+            if (IndexMap.IsCreated) IndexMap.Dispose();
+            if (NextPositionMap.IsCreated) NextPositionMap.Dispose();
+            _navMeshQuery.Dispose();
         }
     }
 

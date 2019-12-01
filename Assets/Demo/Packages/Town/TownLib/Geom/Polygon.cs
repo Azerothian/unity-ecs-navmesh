@@ -345,14 +345,14 @@ namespace Town.Geom
                     {
                         next1 = newPoly.Vertices.LastIndexOf(v);
                     }
-                    i = next1 == -1 ? next : next1;                    
+                    i = next1 == -1 ? next : next1;
                 } while (i != start && indices.Count < 1000);
 
                 if (indices.Count >= 999)
                 {
                     indices = indices.Take(4).ToList();
                 }
-                
+
                 var poly = new Polygon(indices.Select(v => newPoly.Vertices[v]));
 
                 var s = poly.Area();
@@ -584,7 +584,7 @@ namespace Town.Geom
 
             return new Polygon(newVertices);
         }
-        
+
 
         public Polygon RectangleInside()
         {
@@ -611,10 +611,10 @@ namespace Town.Geom
             var newHouse = new Polygon(p1, p2, p2 - Vector2.Scale(normal, greatestDistance),
                 p1 - Vector2.Scale(normal, greatestDistance)).ZoomShrink(0.2f);
 
-            newHouse = newHouse.Translate(newHouse.Center- Center);
+            newHouse = newHouse.Translate(newHouse.Center - Center);
 
 
-            return newHouse;          
+            return newHouse;
         }
 
         public Polygon ZoomShrink(float amount)
@@ -653,7 +653,7 @@ namespace Town.Geom
         {
             return (Vertices != null ? Vertices.GetHashCode() : 0);
         }
-        
+
         public string ToSvgPolygon(string className, string extra = "")
         {
             var points = string.Join(" ", Vertices.Select(p => p.ToString()));

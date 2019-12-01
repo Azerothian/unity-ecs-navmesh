@@ -64,7 +64,7 @@ namespace Town.Geom
                 return false;
             }
 
-            return Equals((Edge) obj);
+            return Equals((Edge)obj);
         }
 
         public override int GetHashCode()

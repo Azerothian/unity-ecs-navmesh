@@ -25,13 +25,13 @@ namespace MeshUtils
             public int[] faceIndex = new int[2];
         }
 
-        public static void Extrude (Mesh srcMesh, Mesh extrudedMesh, Matrix4x4[] extrusion, bool invertFaces)
+        public static void Extrude(Mesh srcMesh, Mesh extrudedMesh, Matrix4x4[] extrusion, bool invertFaces)
         {
-            Edge[] edges = BuildManifoldEdges (srcMesh);
-            Extrude (srcMesh, extrudedMesh, extrusion, edges, invertFaces);
+            Edge[] edges = BuildManifoldEdges(srcMesh);
+            Extrude(srcMesh, extrudedMesh, extrusion, edges, invertFaces);
         }
 
-        public static void Extrude (Mesh srcMesh, Mesh extrudedMesh, Matrix4x4[] extrusion, Edge[] edges, bool invertFaces)
+        public static void Extrude(Mesh srcMesh, Mesh extrudedMesh, Matrix4x4[] extrusion, Edge[] edges, bool invertFaces)
         {
             int extrudedVertexCount = edges.Length * 2 * extrusion.Length;
             int triIndicesPerStep = edges.Length * 6;
@@ -50,14 +50,14 @@ namespace MeshUtils
             for (int i = 0; i < extrusion.Length; i++)
             {
                 Matrix4x4 matrix = extrusion[i];
-                float vcoord = (float) i / (extrusion.Length - 1);
+                float vcoord = (float)i / (extrusion.Length - 1);
                 foreach (Edge e in edges)
                 {
-                    vertices[v + 0] = matrix.MultiplyPoint (inputVertices[e.vertexIndex[0]]);
-                    vertices[v + 1] = matrix.MultiplyPoint (inputVertices[e.vertexIndex[1]]);
+                    vertices[v + 0] = matrix.MultiplyPoint(inputVertices[e.vertexIndex[0]]);
+                    vertices[v + 1] = matrix.MultiplyPoint(inputVertices[e.vertexIndex[1]]);
 
-                    uvs[v + 0] = new Vector2 (inputUV[e.vertexIndex[0]].x, vcoord);
-                    uvs[v + 1] = new Vector2 (inputUV[e.vertexIndex[1]].x, vcoord);
+                    uvs[v + 0] = new Vector2(inputUV[e.vertexIndex[0]].x, vcoord);
+                    uvs[v + 1] = new Vector2(inputUV[e.vertexIndex[1]].x, vcoord);
 
                     v += 2;
                 }
@@ -71,7 +71,7 @@ namespace MeshUtils
                 int firstCapVertex = c == 0 ? extrudedVertexCount : extrudedVertexCount + inputVertices.Length;
                 for (int i = 0; i < inputVertices.Length; i++)
                 {
-                    vertices[firstCapVertex + i] = matrix.MultiplyPoint (inputVertices[i]);
+                    vertices[firstCapVertex + i] = matrix.MultiplyPoint(inputVertices[i]);
                     uvs[firstCapVertex + i] = inputUV[i];
                 }
             }
@@ -130,32 +130,32 @@ namespace MeshUtils
                 }
             }
 
-            extrudedMesh.Clear ();
+            extrudedMesh.Clear();
             extrudedMesh.name = "extruded";
             extrudedMesh.vertices = vertices;
             extrudedMesh.uv = uvs;
             extrudedMesh.triangles = triangles;
-            extrudedMesh.RecalculateNormals ();
+            extrudedMesh.RecalculateNormals();
         }
 
         /// Builds an array of edges that connect to only one triangle.
         /// In other words, the outline of the mesh	
-        public static Edge[] BuildManifoldEdges (Mesh mesh)
+        public static Edge[] BuildManifoldEdges(Mesh mesh)
         {
             // Build a edge list for all unique edges in the mesh
-            Edge[] edges = BuildEdges (mesh.vertexCount, mesh.triangles);
+            Edge[] edges = BuildEdges(mesh.vertexCount, mesh.triangles);
 
             // We only want edges that connect to a single triangle
-            ArrayList culledEdges = new ArrayList ();
+            ArrayList culledEdges = new ArrayList();
             foreach (Edge edge in edges)
             {
                 if (edge.faceIndex[0] == edge.faceIndex[1])
                 {
-                    culledEdges.Add (edge);
+                    culledEdges.Add(edge);
                 }
             }
 
-            return culledEdges.ToArray (typeof (Edge)) as Edge[];
+            return culledEdges.ToArray(typeof(Edge)) as Edge[];
         }
 
         /// Builds an array of unique edges
@@ -164,7 +164,7 @@ namespace MeshUtils
         /// will get two edges adjoining one triangle.
         /// Often this is not a problem but you can fix it by welding vertices 
         /// and passing in the triangle array of the welded vertices.
-        public static Edge[] BuildEdges (int vertexCount, int[] triangleArray)
+        public static Edge[] BuildEdges(int vertexCount, int[] triangleArray)
         {
             int maxEdgeCount = triangleArray.Length;
             int[] firstEdge = new int[vertexCount + maxEdgeCount];
@@ -192,7 +192,7 @@ namespace MeshUtils
                     int i2 = triangleArray[a * 3 + b];
                     if (i1 < i2)
                     {
-                        Edge newEdge = new Edge ();
+                        Edge newEdge = new Edge();
                         newEdge.vertexIndex[0] = i1;
                         newEdge.vertexIndex[1] = i2;
                         newEdge.faceIndex[0] = a;
@@ -261,7 +261,7 @@ namespace MeshUtils
 
                         if (!foundEdge)
                         {
-                            Edge newEdge = new Edge ();
+                            Edge newEdge = new Edge();
                             newEdge.vertexIndex[0] = i1;
                             newEdge.vertexIndex[1] = i2;
                             newEdge.faceIndex[0] = a;

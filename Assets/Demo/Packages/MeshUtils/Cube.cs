@@ -17,7 +17,7 @@ namespace MeshUtils
         public float Length;
         public float Height;
 
-        public Cube (
+        public Cube(
             string name,
             Vector3[] points,
             float height,
@@ -27,7 +27,7 @@ namespace MeshUtils
         )
         {
 
-            var offset = new Vector3 (0, height, 0);
+            var offset = new Vector3(0, height, 0);
 
             var bottomBackLeftVert = points[0];
             var bottomFrontLeftVert = points[1];
@@ -39,10 +39,10 @@ namespace MeshUtils
             var topFrontRightVert = bottomFrontRightVert + offset;
             var topBackRightVert = bottomBackRightVert + offset;
 
-            var bounds = new Bounds (points[0], Vector3.zero);
+            var bounds = new Bounds(points[0], Vector3.zero);
             foreach (var point in points)
             {
-                bounds.Encapsulate (point);
+                bounds.Encapsulate(point);
             }
 
             // var bottomBackLeftVert = new Vector3 (0, 0, 0);
@@ -170,23 +170,23 @@ namespace MeshUtils
                 bottom
             };
 
-            var z00 = new Vector2 (0, 0);
-            var z01 = new Vector2 (0, bounds.size.y);
-            var z11 = new Vector2 (bounds.size.x, bounds.size.y);
-            var z10 = new Vector2 (bounds.size.x, 0);
+            var z00 = new Vector2(0, 0);
+            var z01 = new Vector2(0, bounds.size.y);
+            var z11 = new Vector2(bounds.size.x, bounds.size.y);
+            var z10 = new Vector2(bounds.size.x, 0);
 
-            var x00 = new Vector2 (0, 0);
-            var x01 = new Vector2 (0, bounds.size.y);
-            var x11 = new Vector2 (bounds.size.z, bounds.size.y);
-            var x10 = new Vector2 (bounds.size.z, 0);
+            var x00 = new Vector2(0, 0);
+            var x01 = new Vector2(0, bounds.size.y);
+            var x11 = new Vector2(bounds.size.z, bounds.size.y);
+            var x10 = new Vector2(bounds.size.z, 0);
 
-            var y00 = new Vector2 (0, 0);
-            var y01 = new Vector2 (0, bounds.size.z);
-            var y11 = new Vector2 (bounds.size.x, bounds.size.z);
-            var y10 = new Vector2 (bounds.size.x, 0);
+            var y00 = new Vector2(0, 0);
+            var y01 = new Vector2(0, bounds.size.z);
+            var y11 = new Vector2(bounds.size.x, bounds.size.z);
+            var y10 = new Vector2(bounds.size.x, 0);
 
-            var yb01 = new Vector2 (bounds.size.z, bounds.size.z);
-            var yb11 = new Vector2 (bounds.size.x - bounds.size.z, bounds.size.z);
+            var yb01 = new Vector2(bounds.size.z, bounds.size.z);
+            var yb11 = new Vector2(bounds.size.x - bounds.size.z, bounds.size.z);
 
             var uvs = new Vector2[]
             {
@@ -222,23 +222,23 @@ namespace MeshUtils
                 y00,
             };
 
-            var mesh = new Mesh ();
+            var mesh = new Mesh();
             mesh.subMeshCount = 6;
             mesh.vertices = vertices;
             mesh.triangles = triangles;
             mesh.uv = uvs;
             mesh.normals = normals;
 
-            mesh.RecalculateBounds ();
+            mesh.RecalculateBounds();
 
-            var go = new GameObject (name, typeof (MeshFilter), typeof (MeshRenderer));
+            var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
             go.transform.parent = parent;
-            MeshRenderer = go.GetComponent<MeshRenderer> ();
+            MeshRenderer = go.GetComponent<MeshRenderer>();
             MeshRenderer.sharedMaterial = material;
-            MeshFilter = go.GetComponent<MeshFilter> ();
+            MeshFilter = go.GetComponent<MeshFilter>();
             MeshFilter.sharedMesh = mesh;
             if (addCollider)
-                MeshCollider = go.AddComponent<MeshCollider> ();
+                MeshCollider = go.AddComponent<MeshCollider>();
 
             // go.isStatic = true;
 
