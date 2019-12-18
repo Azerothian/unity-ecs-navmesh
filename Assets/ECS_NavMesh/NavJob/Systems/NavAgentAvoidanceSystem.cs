@@ -28,6 +28,7 @@ namespace NavJob.Systems
             [ReadOnly]
             [DeallocateOnJobCompletion]
             public NativeArray<Entity> Entities;
+            [NativeDisableParallelForRestriction]
             public ComponentDataFromEntity<NavAgent> Agents;
             //public ComponentDataFromEntity<NavAgentAvoidance> avoidances;
 
@@ -41,13 +42,14 @@ namespace NavJob.Systems
             {
                 var entity = Entities[index];
                 var agent = Agents[entity];
-                //var avoidance = avoidances[entity];
+
                 var move = Vector3.left;
                 if (index % 2 == 1)
                 {
                     move = Vector3.right;
                 }
-                float3 drift = agent.rotation * (Vector3.forward + move) * agent.currentMoveSpeed * DeltaTime;
+
+                float3 drift = math.mul(agent.rotation, DeltaTime) * agent.currentMoveSpeed * (Vector3.forward + move);
                 if (agent.nextWaypointIndex != agent.totalWaypoints)
                 {
                     var offsetWaypoint = agent.currentWaypoint + drift;
@@ -78,6 +80,7 @@ namespace NavJob.Systems
             public NativeArray<Entity> Entities;
             [ReadOnly]
             public ComponentDataFromEntity<NavAgent> Agents;
+            [NativeDisableParallelForRestriction]
             public ComponentDataFromEntity<NavAgentAvoidance> Avoidances;
             public NativeMultiHashMap<int, int>.ParallelWriter IndexMap;
             public NativeMultiHashMap<int, float3>.ParallelWriter NextPositionMap;

@@ -25,7 +25,6 @@ namespace Demo
         private int _lastSpawned;
         private float _nextUpdate;
 
-        private Vector3 one = Vector3.one;
         private EntityArchetype _agentArch;
 
         private int _spawned;
@@ -74,14 +73,14 @@ namespace Demo
             _agentArch = EntityManager.CreateArchetype(
                 typeof(NavAgent),
                 // optional avoidance
-                // typeof(NavAgentAvoidance),
+                /*typeof(NavAgentAvoidance),
                 // optional
-                // typeof (Position),
-                // typeof (Rotation),
-                // typeof (SyncPositionToNavAgent),
-                // typeof (SyncRotationToNavAgent),
-                // typeof (SyncPositionFromNavAgent),
-                // typeof (SyncRotationFromNavAgent),
+                typeof (Translation),
+                typeof (Rotation),
+                typeof (SyncPositionToNavAgent),
+                typeof (SyncRotationToNavAgent),
+                typeof (SyncPositionFromNavAgent),
+                typeof (SyncRotationFromNavAgent),*/
                 typeof(LocalToWorld)
             );
 
@@ -92,9 +91,9 @@ namespace Demo
 
         protected override void OnUpdate()
         {
-            if (Time.time > _nextUpdate && _lastSpawned != _spawned)
+            if (Time.ElapsedTime > _nextUpdate && _lastSpawned != _spawned)
             {
-                _nextUpdate = Time.time + 0.5f;
+                _nextUpdate = (float)Time.ElapsedTime + 0.5f;
                 _lastSpawned = _spawned;
                 SpawnedText.text = $"Spawned: {_spawned} people";
             }
@@ -229,11 +228,11 @@ namespace Demo
 
         protected override void OnUpdate()
         {
-            if (Time.time > _nextUpdate)
+            if (Time.ElapsedTime > _nextUpdate)
             {
                 AwaitingNavmeshText.text = $"Awaiting Path: {_navQuery.PendingCount} people";
                 CachedPathText.text = $"Cached Paths: {_navQuery.CachedCount}";
-                _nextUpdate = Time.time + 0.5f;
+                _nextUpdate = (float)Time.ElapsedTime + 0.5f;
             }
 
             var entityCnt = _agentQuery.CalculateEntityCount();
@@ -310,7 +309,7 @@ namespace Demo
 
         public static Vector3 GetCommercialBuilding()
         {
-            var building = _instance.CommercialBuildings[0];
+            Vector3 building = _instance.CommercialBuildings[0];
             try
             {
                 if (_instance._nextCommercial < _instance.CommercialBuildings.Length)
