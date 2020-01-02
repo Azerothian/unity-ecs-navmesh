@@ -1,0 +1,12 @@
+{
+  "name": "com.camarent.unity-ecs-navmesh",
+  "version": "0.4.0",
+  "repository": {
+    "type" : "git",
+    "directory": "Packages/com.camarent.unity-ecs-navmesh",
+    "url": "https://github.com/Camarent/unity-ecs-navmesh.git"
+  },
+   "publishConfig": {
+    "registry":"https://npm.pkg.github.com/"
+  }
+}
